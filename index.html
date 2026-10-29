@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2b">
+  <title>TourChain — Đặt vé du lịch</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="tc-header">
+    <div class="tc-wrap tc-nav">
+      <a class="tc-brand" href="#home"><span class="tc-brand-mark">T</span><span>TourChain<span class="tc-dot">.</span><small>TRAVEL ON CHAIN</small></span></a>
+      <nav class="tc-nav-links" aria-label="Điều hướng">
+        <a class="is-active" href="#home">Trang chủ</a><a href="#tours">Khám phá tour</a><a href="#my-tickets">Vé của tôi</a>
+      </nav>
+      <button id="tc-connect" class="tc-wallet"><span aria-hidden="true">◇</span><span id="tc-wallet-label">Kết nối MetaMask</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="tc-hero" id="home">
+      <div class="tc-hero-image"></div><div class="tc-hero-overlay"></div>
+      <div class="tc-wrap tc-hero-content">
+        <p class="tc-eyebrow"><span></span> DU LỊCH · CÔNG NGHỆ · TỰ DO</p>
+        <h1>Hành trình mới.<br><em>Quyền sở hữu của bạn.</em></h1>
+        <p class="tc-hero-copy">Khám phá những điểm đến đáng nhớ và quản lý vé du lịch minh bạch với công nghệ blockchain.</p>
+        <div class="tc-hero-actions"><a class="tc-btn tc-btn-light" href="#tours">Khám phá tour <span>↗</span></a><a class="tc-text-link" href="#how-it-works">Cách hoạt động <span>↓</span></a></div>
+        <div class="tc-hero-stats"><div><strong>01</strong><span>Kết nối ví</span></div><div><strong>02</strong><span>Chọn hành trình</span></div><div><strong>03</strong><span>Sở hữu vé số</span></div></div>
+      </div>
+      <div class="tc-hero-side-note">EXPLORE WITH CONFIDENCE — 2026</div>
+    </section>
+
+    <section class="tc-wrap tc-intro-strip" id="how-it-works">
+      <div class="tc-strip-title"><span class="tc-mini-label">VÌ SAO TOURCHAIN?</span><h2>Du lịch theo<br>cách của bạn.</h2></div>
+      <article class="tc-benefit"><span class="tc-benefit-number">01 /</span><div><h3>Minh bạch</h3><p>Thông tin tour và trạng thái vé có thể kiểm tra từ blockchain.</p></div></article>
+      <article class="tc-benefit"><span class="tc-benefit-number">02 /</span><div><h3>Ví của bạn</h3><p>Kết nối MetaMask để thực hiện giao dịch bằng chính ví của mình.</p></div></article>
+      <article class="tc-benefit"><span class="tc-benefit-number">03 /</span><div><h3>Quản lý dễ dàng</h3><p>Theo dõi các vé đã mua và trạng thái sử dụng tại một nơi.</p></div></article>
+    </section>
+
+    <section class="tc-discover" id="tours">
+      <div class="tc-wrap">
+        <div class="tc-section-head">
+          <div><p class="tc-mini-label">CHỌN ĐIỂM ĐẾN TIẾP THEO</p><h2>Những hành trình<br><em>đang chờ bạn.</em></h2></div>
+          <div class="tc-search-area"><label for="tc-search">Tìm theo tên hoặc địa điểm</label><div class="tc-search"><span>⌕</span><input id="tc-search" type="search" placeholder="Ví dụ: Đà Lạt, Phú Quốc..."><button id="tc-clear-search" aria-label="Xóa tìm kiếm">×</button></div></div>
+        </div>
+        <div id="tc-tour-grid" class="tc-tour-grid" aria-live="polite"></div>
+        <div class="tc-list-footer"><span id="tc-count">Đang tải tour...</span><span class="tc-demo-label">DỮ LIỆU MINH HỌA · CHƯA KẾT NỐI CONTRACT</span></div>
+      </div>
+    </section>
+
+    <section class="tc-my-tickets" id="my-tickets">
+      <div class="tc-wrap tc-ticket-layout">
+        <div><p class="tc-mini-label">HÀNH TRÌNH CỦA RIÊNG BẠN</p><h2>Vé của tôi<span class="tc-dot">.</span></h2><p class="tc-muted">Vé được truy vấn theo địa chỉ ví đang kết nối.</p></div>
+        <div class="tc-ticket-placeholder"><div class="tc-ticket-symbol">▤</div><div><h3>Vé sẽ xuất hiện tại đây</h3><p>Khi tích hợp contract, mục này sẽ hiển thị mã vé, tour, thời gian khởi hành và trạng thái sử dụng.</p><span class="tc-status"><i></i> Chưa tải dữ liệu blockchain</span></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="tc-footer"><div class="tc-wrap tc-footer-inner"><a class="tc-brand tc-brand-footer" href="#home"><span class="tc-brand-mark">T</span><span>TourChain<span class="tc-dot">.</span><small>TRAVEL ON CHAIN</small></span></a><p>Đồ án học tập · Hệ thống bán và quản lý vé du lịch trên Blockchain</p><span>TV1 · CUSTOMER FRONTEND</span></div></footer>
+
+  <dialog id="tc-tour-dialog" class="tc-dialog">
+    <button id="tc-close-dialog" class="tc-dialog-close" aria-label="Đóng cửa sổ">×</button>
+    <div class="tc-dialog-cover"><img id="tc-dialog-image" src="" alt=""><span id="tc-dialog-tag" class="tc-card-tag"></span></div>
+    <div class="tc-dialog-content"><p id="tc-dialog-location" class="tc-mini-label"></p><h2 id="tc-dialog-title"></h2><p id="tc-dialog-description" class="tc-muted"></p>
+      <div class="tc-detail-facts"><div><span>Khởi hành</span><strong id="tc-dialog-date">Đang cập nhật</strong></div><div><span>Giá một vé</span><strong id="tc-dialog-price">—</strong></div><div><span>Vé còn lại</span><strong id="tc-dialog-remaining">—</strong></div></div>
+      <div class="tc-purchase-note"><span>01 vé / giao dịch</span><span>Phí gas do người mua thanh toán</span></div>
+      <button id="tc-buy" class="tc-btn tc-btn-dark tc-btn-wide">Kết nối ví để mua vé <span>↗</span></button>
+      <p id="tc-dialog-message" class="tc-dialog-message">Bản giao diện hiện dùng dữ liệu minh họa; chưa gửi giao dịch.</p>
+    </div>
+  </dialog>
+  <div id="tc-toast" class="tc-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
