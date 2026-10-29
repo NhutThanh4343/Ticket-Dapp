@@ -1,0 +1,14 @@
+{
+  "name": "ticket-dapp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TourChain integration modules following QUY_UOC_CHUNG v1.0",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/config/blockchain.js && node --check src/contracts/tourTicketAbi.js && node --check src/blockchain/errors.js && node --check src/services/walletService.js && node --check src/services/ticketService.js"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
+  }
+}
