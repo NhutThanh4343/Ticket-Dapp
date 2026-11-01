@@ -1,6 +1,18 @@
 # Hướng dẫn nối UI với contract
 
-Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Chưa tạo frontend hoặc contract thay phần của thành viên khác.
+Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`; phần admin và source Solidity chưa triển khai trong repo này.
+
+## Frontend khách hàng
+
+Chạy `npm run dev` bằng Vite. `VITE_DATA_MODE=demo` (mặc định) chỉ xem tour mẫu và khóa các thao tác ví/mua vé. Đặt `VITE_DATA_MODE=blockchain` cùng bốn biến bên dưới để đọc contract thật. Không có cơ chế tự rơi về demo nếu mạng hoặc cấu hình lỗi.
+
+`src/data/tourContent.js` chứa ảnh/mô tả/địa điểm theo ID; `demoTours.js` chỉ chứa dữ liệu Tour minh họa đúng cấu trúc. ID mới dùng nội dung mặc định và SVG nội bộ. Mọi chuỗi từ contract được escape khi render HTML; nội dung dialog được gán qua `textContent`.
+
+UI dùng `walletService` cho kết nối/chuyển mạng/khôi phục ví; dùng `ticketService` cho danh sách, chi tiết, mua và đọc vé cá nhân. Giao dịch cung cấp trạng thái khóa nút, mã hash và thông báo. Sau xác nhận, UI tải lại tour và vé; khi đổi tài khoản/mạng, xóa vé ngay và loại các phản hồi của phiên cũ bằng số phiên và số request. Tên tour/thời gian được ghép cho vé; nếu đọc chi tiết tour thất bại, vé vẫn hiển thị mã/chủ/trạng thái và thông báo thiếu chi tiết.
+
+Chỉ dùng nút mua khi tour còn vé và chưa khởi hành. Kiểm tra giờ phía UI dùng đồng hồ trình duyệt; contract vẫn quyết định theo `block.timestamp`. Khi kết nối hoặc chuyển mạng qua nút mua, người dùng bấm mua lần nữa để bắt đầu giao dịch. Tour hết vé/đã khởi hành vẫn xem được chi tiết.
+
+`npm run test:e2e` kiểm thử frontend trong trình duyệt với service mô phỏng. `npm run build` tạo `dist/`; `npm run preview` xem bản build. Xem README cho cấu hình trình duyệt kiểm thử.
 
 ## Cấu hình và ABI
 
