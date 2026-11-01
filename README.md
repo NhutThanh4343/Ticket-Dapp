@@ -63,7 +63,7 @@ npm run preview
 
 Browser test dùng Playwright với service mô phỏng; không yêu cầu MetaMask thật và không gửi giao dịch. Trên Windows mặc định dùng Edge đã cài. Có thể chọn Chrome bằng biến môi trường `PLAYWRIGHT_CHANNEL=chrome`. Trên môi trường khác, chạy `npx playwright install chromium` trước lần kiểm thử đầu. Ảnh chụp desktop/mobile và trace khi lỗi nằm trong `test-results/`, không đưa lên Git.
 
-Build xuất thư mục `dist/`; `preview` mở bản build trên máy để kiểm tra. Không có backend, giao diện admin, NFT/ERC-721 hoặc xác minh QR trong phần hiện tại. Giao diện admin bổ sung sau.
+Build xuất thư mục `dist/`; `preview` mở bản build trên máy để kiểm tra. Giao diện admin từ `feature/frontend` được giữ dưới dạng xem trước qua nút **Xem giao diện**. Các số liệu/biểu đồ/nhật ký admin là minh họa và các nút ghi dữ liệu chưa được bật; chuyển giao diện không đăng nhập hay cấp quyền. Tích hợp admin, backend, NFT/ERC-721 và xác minh QR bổ sung sau.
 
 ## Bàn giao contract còn thiếu
 

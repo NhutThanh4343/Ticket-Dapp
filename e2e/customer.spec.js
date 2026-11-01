@@ -6,6 +6,7 @@ const buyerB = '0x0000000000000000000000000000000000000004';
 async function setup(page, mode = 'blockchain') {
   await page.route('https://images.unsplash.com/**', (route) => route.abort());
   await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ body: '', contentType: 'text/css' }));
+  await page.route('https://cdn.jsdelivr.net/**', (route) => route.abort());
   await page.addInitScript(() => {
     const buyer = '0x0000000000000000000000000000000000000002';
     const walletListeners = new Set();
@@ -225,4 +226,28 @@ test('signature rejection is shown without creating a ticket or reporting succes
   await expect(page.locator('#tc-transaction')).toHaveAttribute('data-status', 'error');
   await expect(page.locator('.tc-owned-ticket')).toHaveCount(0);
   await expect(page.locator('#tc-buy')).toBeEnabled();
+});
+
+test('incoming admin layout is a preview with disabled actions and preserves customer integration', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await setup(page, 'demo');
+  await page.goto('/');
+  await expect(page.locator('.tc-tour-card')).toHaveCount(6);
+  await page.locator('#tc-login-btn').click();
+  await page.locator('[data-tc-preview="admin"]').click();
+  await expect(page.locator('#tc-admin-view')).toBeVisible();
+  await expect(page.locator('.tc-admin-preview-notice')).toContainText('CHƯA TÍCH HỢP');
+  await page.locator('[data-tc-admin-tab="create-tour"]').click();
+  await expect(page.locator('#tcMintName')).toBeDisabled();
+  await expect(page.locator('#tc-admin-mint-form button')).toBeDisabled();
+  await page.locator('[data-tc-admin-tab="contract"]').click();
+  await expect(page.locator('#tcPauseContractBtn')).toBeDisabled();
+  await page.locator('#tc-login-btn').click();
+  await page.locator('[data-tc-preview="user"]').click();
+  await expect(page.locator('#tc-customer-view')).toBeVisible();
+  await expect(page.locator('#tc-admin-view')).toBeHidden();
+  await expect(page.locator('.tc-tour-card')).toHaveCount(6);
+  expect(await page.evaluate(() => window.tcHarness.purchaseCalls)).toBe(0);
+  expect(errors).toEqual([]);
 });

@@ -1,6 +1,8 @@
 # Hướng dẫn nối UI với contract
 
-Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`; phần admin và source Solidity chưa triển khai trong repo này.
+Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`; phần kết nối contract cho admin và source Solidity chưa triển khai trong repo này.
+
+Sau khi gộp `feature/frontend`, giao diện admin có sẵn dưới dạng xem trước qua `src/ui/adminPreview.js`. Module này chỉ chuyển màn hình/tab và vẽ dữ liệu biểu đồ minh họa; không cấp quyền qua tài khoản/mật khẩu, tạo tour mẫu, check-in giả hay gửi lệnh pause/withdraw. Các thao tác admin vẫn để tích hợp sau; quyền thật chỉ được contract xác nhận theo ví.
 
 ## Frontend khách hàng
 
