@@ -1,9 +1,22 @@
+# Dependencies and frontend build
 node_modules/
 dist/
+/bundle
+
+# Test output
 coverage/
 test-results/
 playwright-report/
+*.log
+
+# Local environment files (frontend and Hardhat)
 .env
 .env.*
 !.env.example
-*.log
+
+# Hardhat compilation, generated types and Solidity test output
+/artifacts
+/cache
+/types
+/.gas-snapshot
+/snapshots

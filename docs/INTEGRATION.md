@@ -1,6 +1,6 @@
 # Hướng dẫn nối UI với contract
 
-Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`; phần kết nối contract cho admin và source Solidity chưa triển khai trong repo này.
+Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`. Source `contracts/TourTicketContract.sol` và môi trường Hardhat 3 đã có trong repo; giao diện admin vẫn chưa nối contract.
 
 Sau khi gộp `feature/frontend`, giao diện admin có sẵn dưới dạng xem trước qua `src/ui/adminPreview.js`. Module này chỉ chuyển màn hình/tab và vẽ dữ liệu biểu đồ minh họa; không cấp quyền qua tài khoản/mật khẩu, tạo tour mẫu, check-in giả hay gửi lệnh pause/withdraw. Các thao tác admin vẫn để tích hợp sau; quyền thật chỉ được contract xác nhận theo ví.
 
@@ -132,6 +132,8 @@ Nếu receipt đã thành công nhưng thiếu event mong đợi, dịch vụ b�
 
 `IntegrationError` có `code`, `message` tiếng Việt, và `cause` khi có lỗi gốc. Module giải mã 12 custom error trong quy ước, cùng lỗi từ chối, thiếu tiền, sai mạng, mất RPC, chưa kết nối ví và đang có giao dịch chờ. Revert không giải mã được vẫn có thông báo dự phòng. Khi thay ABI compile, các error bổ sung của contract như chống reentrancy dùng thông báo dự phòng nếu chưa có bản dịch.
 
-`npm test` chạy kiểm thử Node với provider/contract mô phỏng, dùng Interface ethers thật để encode/decode ABI, event và error. Chưa gửi giao dịch hoặc kiểm chứng logic Solidity, thanh toán doanh thu, reentrancy hay hành vi extension MetaMask thật. Sau bàn giao deployment, chạy đủ 10 mục nghiệm thu trong quy ước, gồm ví A/B, ID 0, quyền admin và tiền về admin.
+`npm test` chạy kiểm thử Node với provider/contract mô phỏng, dùng Interface ethers thật để encode/decode ABI, event và error. `npm run test:contracts` chạy bộ Hardhat riêng; test `test/contracts/TourTicketService.ts` gọi service thật với Solidity triển khai trên EVM mô phỏng, kiểm tra quyền tạo tour, mua vé ID 0, tiền về admin và dùng vé. Build trước rồi kiểm tra kiểu bằng `npm run typecheck:contracts`; test TypeScript nằm riêng để Mocha không chạy nhầm các test Node.
+
+Chưa gửi giao dịch lên testnet hoặc kiểm chứng toàn bộ hành vi reentrancy/hoàn tác chuyển tiền và extension MetaMask thật. Sau bàn giao deployment, cập nhật ABI từ đúng bản compile và chạy đủ 10 mục nghiệm thu trong quy ước.
 
 Tham khảo API: [ethers v6](https://docs.ethers.org/v6/getting-started/) và [MetaMask provider](https://docs.metamask.io/metamask-connect/evm/reference/provider-api/).

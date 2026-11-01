@@ -1,10 +1,10 @@
 # Ticket-Dapp — TourChain
 
-Frontend khách hàng bán và quản lý vé du lịch theo `QUY_UOC_CHUNG.md` v1.0. Giao diện dùng **HTML/CSS/JavaScript thuần + Vite + ethers.js v6**, kết nối MetaMask qua module dịch vụ dùng chung.
+Frontend khách hàng bán và quản lý vé du lịch theo `QUY_UOC_CHUNG.md` v1.0. Giao diện dùng **HTML/CSS/JavaScript thuần + Vite + ethers.js v6**, kết nối MetaMask qua module dịch vụ dùng chung. Phần Solidity và môi trường **Hardhat 3 + Mocha + ethers** được gộp từ `feature/tv2-smart-contract`.
 
 ## Chạy trên máy
 
-Yêu cầu Node.js 20.19+ hoặc 22.12+ (khuyến nghị Node 24) và npm.
+Dùng Node.js 24 và npm cho cả frontend lẫn Hardhat. Môi trường đã kiểm tra: Node.js 24.14.0.
 
 ```sh
 npm install
@@ -45,7 +45,12 @@ assets/tour-placeholder.svg     Ảnh mặc định cho tour mới hoặc ảnh 
 src/config/                    Cấu hình blockchain và chế độ dữ liệu
 src/services/                  Kết nối ví và sáu hàm dịch vụ contract
 src/contracts/tourTicketAbi.js  ABI theo đặc tả, chưa phải ABI deployment
-test/                          Kiểm thử dịch vụ, cấu hình và định dạng
+contracts/                     TourTicketContract.sol và mẫu Counter/Solidity tests
+hardhat.config.ts              Cấu hình compiler và mạng Hardhat
+test/*.test.js                 Kiểm thử dịch vụ/frontend bằng Node
+test/contracts/                Kiểm thử TypeScript bằng Hardhat + Mocha
+ignition/modules/              Module triển khai mẫu Counter
+scripts/                       Script Hardhat mẫu
 e2e/                           Kiểm thử frontend trong trình duyệt
 ```
 
@@ -56,6 +61,9 @@ Cập nhật `tourContent.js` theo ID của deployment thật. Tên, thời gian
 ```sh
 npm run check
 npm test
+npm run compile:contracts
+npm run typecheck:contracts
+npm run test:contracts
 npm run test:e2e
 npm run build
 npm run preview
@@ -63,10 +71,16 @@ npm run preview
 
 Browser test dùng Playwright với service mô phỏng; không yêu cầu MetaMask thật và không gửi giao dịch. Trên Windows mặc định dùng Edge đã cài. Có thể chọn Chrome bằng biến môi trường `PLAYWRIGHT_CHANNEL=chrome`. Trên môi trường khác, chạy `npx playwright install chromium` trước lần kiểm thử đầu. Ảnh chụp desktop/mobile và trace khi lỗi nằm trong `test-results/`, không đưa lên Git.
 
+`npm test` chỉ chạy các test JavaScript của frontend/service. `npm run test:contracts` chạy Solidity tests và Mocha tests trong `test/contracts/`, không chạy nhầm các file dùng `node:test`. Test `TourTicketService.ts` triển khai contract trên EVM mô phỏng và gọi service thật để kiểm tra tạo tour, mua vé ID 0, chuyển tiền về admin, quyền quản trị và sử dụng vé. Các file `.d.ts` đi kèm service/lỗi giúp test TypeScript sử dụng module frontend JavaScript.
+
+Hardhat hiện cấu hình Solidity **0.8.34**: profile `default` không bật optimizer; profile `production` bật optimizer với `runs: 200`. Artifact được tạo dưới `artifacts/` và không đưa lên Git. Phải ghi nhận đúng profile và ABI của lần triển khai thực tế.
+
+`npm run node:contracts` mở node phát triển cục bộ. `Counter.ts` trong Ignition và `scripts/send-op-tx.ts` là ví dụ, không phải quy trình deploy `TourTicketContract`. Cấu hình Sepolia dùng `SEPOLIA_RPC_URL` và `SEPOLIA_PRIVATE_KEY` qua biến cấu hình Hardhat; chỉ nhập bí mật trên máy/keystore, không dùng biến `VITE_*` hoặc commit chúng. Không cần khóa Sepolia để build và chạy test mô phỏng.
+
 Build xuất thư mục `dist/`; `preview` mở bản build trên máy để kiểm tra. Giao diện admin từ `feature/frontend` được giữ dưới dạng xem trước qua nút **Xem giao diện**. Các số liệu/biểu đồ/nhật ký admin là minh họa và các nút ghi dữ liệu chưa được bật; chuyển giao diện không đăng nhập hay cấp quyền. Tích hợp admin, backend, NFT/ERC-721 và xác minh QR bổ sung sau.
 
 ## Bàn giao contract còn thiếu
 
-Chưa có source Solidity, ABI compile/deployment thật, mạng/địa chỉ chung, phiên bản compiler Solidity cụ thể và thiết lập optimizer. Điền các thông tin này trước khi nghiệm thu testnet và chạy đủ checklist trong quy ước; kiểm thử mô phỏng không kiểm chứng logic Solidity hoặc chuyển doanh thu về admin.
+Đã có `contracts/TourTicketContract.sol`, cấu hình compiler và kiểm thử service với contract trên EVM mô phỏng. Chưa có deployment testnet, địa chỉ contract/admin và cấu hình RPC dùng chung. Frontend vẫn dùng ABI theo đặc tả; trước khi bật blockchain, cập nhật ABI đúng artifact/profile đã deploy và các biến môi trường. Kiểm thử hiện tại chưa thay thế toàn bộ checklist nghiệm thu hoặc kiểm tra reentrancy/hoàn tác khi chuyển tiền thất bại.
 
-Xem [hướng dẫn module integration](docs/INTEGRATION.md) và [tài liệu Vite](https://vite.dev/guide/).
+Xem [hướng dẫn module integration](docs/INTEGRATION.md), [tài liệu Vite](https://vite.dev/guide/) và [Hardhat 3](https://hardhat.org/docs/getting-started).
