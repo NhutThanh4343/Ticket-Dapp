@@ -22,6 +22,7 @@ export interface BlockchainConfig {
   rpcUrl: string;
   contractAddress: string;
   adminAddress: string;
+  deploymentBlock?: number;
 }
 
 export interface WalletSession {
@@ -51,6 +52,9 @@ export interface TransactionState {
 }
 
 export interface TicketService {
+  readAdmin(): Promise<string>;
+  readTicket(ticketId: IntegerInput): Promise<Ticket>;
+  listTickets(): Promise<Ticket[]>;
   listTours(): Promise<Tour[]>;
   readTour(tourId: IntegerInput): Promise<Tour>;
   listMyTickets(): Promise<Ticket[]>;
@@ -80,3 +84,6 @@ export const listMyTickets: TicketService['listMyTickets'];
 export const createTour: TicketService['createTour'];
 export const purchaseTicket: TicketService['purchaseTicket'];
 export const useTicket: TicketService['useTicket'];
+export const readAdmin: TicketService['readAdmin'];
+export const readTicket: TicketService['readTicket'];
+export const listTickets: TicketService['listTickets'];

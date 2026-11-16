@@ -99,7 +99,16 @@ export function createWalletService({ getConfig = readBlockchainConfig, ethereum
   async function switchNetwork() {
     try {
       const config = getConfig();
-      await getEthereum().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: toQuantity(config.chainId) }] });
+      try {
+        await getEthereum().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: toQuantity(config.chainId) }] });
+      } catch (error) {
+        if (error.code !== 4902 && error?.data?.originalError?.code !== 4902) throw error;
+        await getEthereum().request({ method: 'wallet_addEthereumChain', params: [{
+          chainId: toQuantity(config.chainId), chainName: `TourChain ${config.chainId}`,
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [config.rpcUrl],
+        }] });
+        await getEthereum().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: toQuantity(config.chainId) }] });
+      }
       return await restore();
     } catch (error) {
       if (error.code === 4902) throw new IntegrationError('NETWORK_NOT_ADDED', 'Hãy thêm testnet đã thống nhất vào MetaMask rồi thử lại.', error);

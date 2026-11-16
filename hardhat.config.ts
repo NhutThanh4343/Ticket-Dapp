@@ -12,10 +12,12 @@ export default defineConfig({
     profiles: {
       default: {
         version: "0.8.34",
+        settings: { evmVersion: "cancun" },
       },
       production: {
         version: "0.8.34",
         settings: {
+          evmVersion: "cancun",
           optimizer: {
             enabled: true,
             runs: 200,
@@ -25,6 +27,11 @@ export default defineConfig({
     },
   },
   networks: {
+    localhost: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.TOURCHAIN_LOCAL_RPC_URL ?? "http://127.0.0.1:8545",
+    },
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",

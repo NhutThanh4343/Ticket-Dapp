@@ -1,5 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
+.tc-panel { margin-top: 24px; }
+.tc-deploy { max-width: 760px; padding-block: 50px; color: #f1f5f9; background: #152238; padding-inline: 24px; margin-block: 30px; border-radius: 20px; line-height: 1.7; }
+.tc-deploy select { padding: 12px; border-radius: 8px; }
+.tc-deploy pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.tc-table-scroll { overflow-x: auto; }
+.tc-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 13px; text-align: left; }
+.tc-table th, .tc-table td { padding: 12px 10px; border-bottom: 1px solid #344359; vertical-align: top; }
+.tc-table th { color: #b9c9d8; }
+.tc-address { overflow-wrap: anywhere; word-break: break-word; }
+.tc-admin-message { line-height: 1.7; overflow-wrap: anywhere; min-height: 24px; color: #cbd5e1; }
+.tc-admin-message.tc-error-text { color: #ffb4a5; }
+.tc-checkin-result { margin-top: 24px; padding: 16px 0; line-height: 1.7; overflow-wrap: anywhere; }
+.tc-confirm-label { display: flex; align-items: flex-start; gap: 12px; font-size: 13px; line-height: 1.6; }
+.tc-stat-value { overflow-wrap: anywhere; }
+
 :root {
   font-family: "DM Sans", Arial, sans-serif;
   color: #182533;

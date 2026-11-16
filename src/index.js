@@ -4,5 +4,5 @@ export { IntegrationError, toIntegrationError } from './blockchain/errors.js';
 export { createWalletService, walletService } from './services/walletService.js';
 export {
   createTicketService, ticketService,
-  listTours, readTour, createTour, purchaseTicket, listMyTickets, useTicket,
+  listTours, readTour, createTour, purchaseTicket, listMyTickets, useTicket, readAdmin, readTicket, listTickets,
 } from './services/ticketService.js';

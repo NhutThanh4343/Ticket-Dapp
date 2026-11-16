@@ -16,6 +16,7 @@ describe("TourTicket frontend service with the merged contract", function () {
       rpcUrl: "http://localhost:8545", // Unused: the test supplies the simulated provider.
       contractAddress: await contract.getAddress(),
       adminAddress: admin.address,
+      deploymentBlock: 0,
     };
     let signer = admin;
     let revision = 0;
@@ -28,6 +29,7 @@ describe("TourTicket frontend service with the merged contract", function () {
     const service = createTicketService({ getConfig: () => config, wallet, readProvider: ethers.provider });
     try {
       assert.deepEqual(await service.listTours(), []);
+      assert.equal(await service.readAdmin(), admin.address);
       const price = ethers.parseEther("0.01");
       const input = { name: "Tour integration", departureTime: BigInt(await networkHelpers.time.latest()) + 3600n, price, totalTickets: 2n };
       const created = await service.createTour(input);
@@ -45,6 +47,8 @@ describe("TourTicket frontend service with the merged contract", function () {
       assert.equal(owned.length, 1);
       assert.equal(owned[0].owner, buyer.address);
       assert.equal(owned[0].isUsed, false);
+      assert.equal((await service.readTicket(0n)).owner, buyer.address);
+      assert.equal((await service.listTickets()).length, 1);
 
       signer = admin;
       revision++;

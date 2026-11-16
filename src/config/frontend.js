@@ -2,11 +2,10 @@ import { readBlockchainConfig } from './blockchain.js';
 import { IntegrationError } from '../blockchain/errors.js';
 
 export function readFrontendSettings(env = import.meta.env ?? {}) {
-  const mode = env.VITE_DATA_MODE?.trim() || 'demo';
-  if (!['demo', 'blockchain'].includes(mode)) {
-    return { mode, config: null, error: new IntegrationError('CONFIG_ERROR', 'VITE_DATA_MODE chỉ nhận demo hoặc blockchain.') };
+  const mode = env.VITE_DATA_MODE?.trim() || 'blockchain';
+  if (mode !== 'blockchain') {
+    return { mode: 'blockchain', config: null, error: new IntegrationError('CONFIG_ERROR', 'Ứng dụng chỉ sử dụng dữ liệu blockchain. Đặt VITE_DATA_MODE=blockchain.') };
   }
-  if (mode === 'demo') return { mode, config: null, error: null };
   try {
     return { mode, config: readBlockchainConfig(env), error: null };
   } catch (error) {

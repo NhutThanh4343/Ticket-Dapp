@@ -1,139 +1,40 @@
-# Hướng dẫn nối UI với contract
+# Integration TourChain
 
-Các module dùng JavaScript ES modules và ethers.js v6; không phụ thuộc React. Frontend khách hàng HTML/CSS được nối qua `app.js` và `src/ui/customerApp.js`. Source `contracts/TourTicketContract.sol` và môi trường Hardhat 3 đã có trong repo; giao diện admin vẫn chưa nối contract.
+Ứng dụng dùng các module JavaScript ES modules với ethers v6. Các hàm ghi trả kết quả sau receipt thành công; giá và số nguyên giữ dạng bigint. ID `0` hợp lệ. Giá ETH nhập dưới dạng chuỗi được chuyển bằng `parseEther`; thời gian là Unix giây.
 
-Sau khi gộp `feature/frontend`, giao diện admin có sẵn dưới dạng xem trước qua `src/ui/adminPreview.js`. Module này chỉ chuyển màn hình/tab và vẽ dữ liệu biểu đồ minh họa; không cấp quyền qua tài khoản/mật khẩu, tạo tour mẫu, check-in giả hay gửi lệnh pause/withdraw. Các thao tác admin vẫn để tích hợp sau; quyền thật chỉ được contract xác nhận theo ví.
+## Luồng dữ liệu
 
-## Frontend khách hàng
+- `listTours()` và `readTour(id)` đọc qua RPC công khai.
+- `listMyTickets()` đọc bằng signer để `msg.sender` đúng ví đang kết nối.
+- `createTour(input)`, `purchaseTicket(id)`, `useTicket(id)` dùng signer, chờ receipt và giải mã event từ đúng địa chỉ contract.
+- `readAdmin()` đối chiếu cấu hình với getter `admin()` trên chuỗi.
+- `readTicket(id)` dùng getter `tickets(id)` có sẵn trong source đã bàn giao.
+- `listTickets()` truy vấn `TicketPurchased` từ block triển khai theo từng khoảng 1.000 block, khử trùng ID và đọc trạng thái ticket hiện tại theo nhóm tối đa 20 vé.
 
-Chạy `npm run dev` bằng Vite. `VITE_DATA_MODE=demo` (mặc định) chỉ xem tour mẫu và khóa các thao tác ví/mua vé. Đặt `VITE_DATA_MODE=blockchain` cùng bốn biến bên dưới để đọc contract thật. Không có cơ chế tự rơi về demo nếu mạng hoặc cấu hình lỗi.
+Dashboard chỉ được mở sau khi ví hiện tại đúng mạng và khớp admin trên chuỗi. Ẩn giao diện không thay thế kiểm tra quyền trong Solidity. Khi đổi ví/mạng, UI đóng admin, xóa dữ liệu vé/quản trị và bỏ các phản hồi của phiên cũ. Khách và admin tải lại dữ liệu sau giao dịch và định kỳ khi trang đang hiển thị.
 
-`src/data/tourContent.js` chứa ảnh/mô tả/địa điểm theo ID; `demoTours.js` chỉ chứa dữ liệu Tour minh họa đúng cấu trúc. ID mới dùng nội dung mặc định và SVG nội bộ. Mọi chuỗi từ contract được escape khi render HTML; nội dung dialog được gán qua `textContent`.
+Admin tạo tour với tên được trim, giá wei, thời gian giây và tổng vé. Doanh thu được tính từ tổng `price * soldTickets` vì giá tour không sửa được và contract chuyển ngay tiền mua vé về admin. Vé đã dùng vẫn nằm trong danh sách và không giảm soldTickets. Không có số liệu royalty, số dư có thể rút hay trạng thái pause trong nghiệp vụ này.
 
-UI dùng `walletService` cho kết nối/chuyển mạng/khôi phục ví; dùng `ticketService` cho danh sách, chi tiết, mua và đọc vé cá nhân. Giao dịch cung cấp trạng thái khóa nút, mã hash và thông báo. Sau xác nhận, UI tải lại tour và vé; khi đổi tài khoản/mạng, xóa vé ngay và loại các phản hồi của phiên cũ bằng số phiên và số request. Tên tour/thời gian được ghép cho vé; nếu đọc chi tiết tour thất bại, vé vẫn hiển thị mã/chủ/trạng thái và thông báo thiếu chi tiết.
+## Receipt và lỗi
 
-Chỉ dùng nút mua khi tour còn vé và chưa khởi hành. Kiểm tra giờ phía UI dùng đồng hồ trình duyệt; contract vẫn quyết định theo `block.timestamp`. Khi kết nối hoặc chuyển mạng qua nút mua, người dùng bấm mua lần nữa để bắt đầu giao dịch. Tour hết vé/đã khởi hành vẫn xem được chi tiết.
+Mỗi instance dịch vụ chỉ xử lý một thao tác ghi đang chờ. Trạng thái `preparing → awaiting_signature → pending → success/error` giúp UI khóa nút. Transaction state ghi tài khoản gửi ban đầu để không nhầm khi người dùng đổi ví trong lúc chờ.
 
-`npm run test:e2e` kiểm thử frontend trong trình duyệt với service mô phỏng. `npm run build` tạo `dist/`; `npm run preview` xem bản build. Xem README cho cấu hình trình duyệt kiểm thử.
+ID được lấy từ event sau xác nhận, không đoán từ độ dài mảng. Transaction tăng phí dùng receipt thay thế; hủy/thay ý định trả lỗi. Nếu receipt thành công nhưng thiếu event, dịch vụ đánh dấu `confirmed: true`, yêu cầu kiểm tra ABI và tải lại dữ liệu, không tự gửi lại.
 
-## Cấu hình và ABI
+Các custom error v1.0 và lỗi ví/RPC được chuyển thành `IntegrationError` có `code`, thông báo và `cause`. RPC lỗi sau khi có hash có thể làm kết quả chờ chưa rõ; kiểm tra hash trên mạng tương ứng trước khi gửi lại. Dữ liệu contract được escape trước khi render HTML.
 
-Điền bốn biến trong `.env.local` từ `.env.example`. Chỉ dùng testnet đã được nhóm thống nhất. Không có địa chỉ hoặc mạng mặc định. `readBlockchainConfig()` trả `{ chainId: bigint, rpcUrl, contractAddress, adminAddress }`; cấu hình thiếu/sai báo `CONFIG_ERROR`.
+## Deployment
 
-`src/contracts/tourTicketAbi.js` là ABI viết theo quy ước để chuẩn bị code, không xác nhận có deployment. Thay bằng ABI compile thật trước khi tích hợp testnet. Không giả định có getter `admin()` hoặc `getTicket()` vì đặc tả không quy định hai hàm này. Địa chỉ admin trên UI dùng cấu hình chung; kiểm tra quyền thật thuộc contract.
+`start:local` dùng node Hardhat và deployment production thật trên node local. Có thể dùng lại deployment cũ chỉ khi runtime bytecode và admin khớp artifact/ví triển khai. Contract mới luôn bắt đầu với mảng tour/vé rỗng. Launcher chỉ dừng các tiến trình do nó tạo; node đang chạy sẵn không bị dừng.
 
-## Kết nối ví
+`scripts/deploy.ts` dùng API `network.create()` của Hardhat 3; xác nhận chain ID, kiểm tra public RPC, deploy và chờ receipt trước khi ghi cấu hình. Các bản ghi CLI có địa chỉ, admin, block, hash, runtime code hash, compiler, EVM target và build profile. ABI/bytecode được xuất từ đúng artifact dùng deploy.
 
-```js
-import { walletService, ticketService } from './src/index.js';
+`deploy.html` dùng MetaMask cho bước ký và public RPC đúng mạng cho bước chờ receipt/đối chiếu admin. File tải về là `tourchain.env.txt` để tránh trình duyệt Windows đổi tên file bắt đầu bằng dấu chấm; người vận hành lưu thành `.env.local`. File chỉ chứa cấu hình công khai. Không có dịch vụ giữ khóa, mật khẩu hay seed phrase.
 
-// Chạy khi người dùng bấm nút kết nối; không gọi lúc render React.
-const wallet = await walletService.connect();
-console.log(wallet.account, wallet.isAdmin, wallet.isCorrectNetwork);
+## Vận hành và phạm vi
 
-// Thử khôi phục quyền đã cấp, không mở yêu cầu cấp quyền mới.
-await walletService.restore();
+Contract là v1.0 trong quy ước: một giao dịch mua một vé; tour/vé không sửa/xóa/chuyển nhượng; admin cố định là deployer; ảnh/mô tả nằm ngoài chuỗi. Các getter công khai `admin()`/`tickets(id)` do source contract cung cấp được dùng cho quản trị, không thêm giao diện Solidity mới.
 
-// Chỉ gọi khi người dùng bấm nút chuyển mạng. Mạng chưa có cần thêm trong ví.
-await walletService.switchNetwork();
+Xác nhận sử dụng hiện là quy trình admin đối chiếu người trình vé với ví sở hữu. Nhập đúng địa chỉ không phải bằng chứng chữ ký/QR. Việc thêm giao thức chữ ký, hoàn tiền, NFT hoặc thay admin cần đặc tả và kiểm thử riêng.
 
-const unsubscribe = walletService.subscribe((state) => {
-  // Cập nhật tài khoản/quyền/mạng; xóa ngay vé của tài khoản trước đó.
-  // Nếu connected && isCorrectNetwork: tải lại vé hiện tại.
-  // Hủy/bỏ qua các request UI cũ để chúng không ghi đè dữ liệu ví mới.
-  console.log(state);
-});
-
-// Khi component unmount:
-unsubscribe();
-
-// Nút ngắt kết nối cục bộ; không thu hồi quyền của website trong MetaMask.
-walletService.disconnect();
-```
-
-Trạng thái ví gồm `account`, `chainId`, `connected`, `isAdmin`, `isCorrectNetwork`, `revision`. `getState()` lấy bản chụp hiện tại; `subscribe()` chỉ nhận các lần thay đổi tiếp theo. Trong React, khởi tạo state bằng `getState()`, đăng ký trong `useEffect` và trả hàm hủy đăng ký. `getSession()` luôn tạo signer mới và kiểm tra lại tài khoản/mạng; request vé đang đọc bị loại bỏ nếu phiên ví thay đổi.
-
-Module chọn MetaMask trong `window.ethereum.providers` nếu có, nếu không dùng `window.ethereum`. Với host dùng EIP-6963, có thể truyền provider MetaMask đã chọn vào factory `createWalletService({ ethereum, getConfig })`; không cần SDK MetaMask riêng. Nếu tạo instance ví riêng, truyền cùng instance vào `createTicketService({ wallet, getConfig })`.
-
-## Gọi dịch vụ
-
-```js
-import { parseEther, formatEther } from 'ethers';
-import { ticketService } from './src/index.js';
-
-// Đọc qua RPC công khai: không cần ví hay yêu cầu ký.
-const tours = await ticketService.listTours();
-const tour = await ticketService.readTour(0n);
-console.log(formatEther(tour.price));
-
-// Giá nhập ETH phải là chuỗi; datetime-local dùng múi giờ trình duyệt.
-const date = new Date('2030-01-01T08:00');
-if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) {
-  throw new Error('Giờ khởi hành phải ở tương lai.');
-}
-const created = await ticketService.createTour({
-  name: 'Tour Đà Lạt',
-  departureTime: BigInt(Math.floor(date.getTime() / 1000)),
-  price: parseEther('0.01'),
-  totalTickets: 30n,
-});
-// created: { tourId: bigint, txHash: string }
-
-const purchased = await ticketService.purchaseTicket(0n);
-// purchased: { ticketId: bigint, txHash: string }
-const tickets = await ticketService.listMyTickets();
-// Cần ví hiện tại; bao gồm cả vé đã dùng, không cần ký giao dịch đọc.
-
-await ticketService.useTicket(purchased.ticketId);
-// { txHash: string }; chỉ admin được contract cho phép.
-```
-
-Các đoạn trên minh họa API, không phải kịch bản chạy nguyên khối: tạo/sử dụng vé cần ví admin, mua/xem vé cần ví người mua. Admin cũng có thể mua vé. Contract quyết định thời gian hợp lệ theo `block.timestamp`; UI kiểm tra trước để hướng dẫn người dùng.
-
-`listTours()`/`readTour()` trả `Tour` đủ sáu trường theo thứ tự quy ước; `listMyTickets()` trả `Ticket` đủ bốn trường. Các `uint256` giữ nguyên `bigint`; ID `0n` hợp lệ. Dùng `id.toString()` làm key/nhãn; không kiểm tra tồn tại bằng `if (!id)`. Chỉ đổi timestamp sang Number trong phạm vi ngày JavaScript hỗ trợ để hiển thị `new Date(Number(tour.departureTime) * 1000)`. Không `JSON.stringify()` trực tiếp bigint.
-
-`purchaseTicket()` tự đọc giá hiện tại và gửi `{ value: tour.price }`; không nhận owner/price từ UI. Contract vẫn kiểm tra tồn tại, giờ khởi hành, số vé và giá trị thanh toán. Không suy ra ID mới từ độ dài danh sách.
-
-## Trạng thái giao dịch và tải lại dữ liệu
-
-```js
-const unsubscribeTx = ticketService.subscribeTransactions((state) => {
-  const busy = ['preparing', 'awaiting_signature', 'pending'].includes(state.status);
-  // Dùng busy để khóa các nút ghi; hiển thị state.txHash khi đã gửi.
-  // success: báo thành công, tải lại các nhóm dữ liệu trong state.refresh.
-  // error: hiển thị state.error.message.
-  console.log(busy, state);
-});
-
-try {
-  await ticketService.purchaseTicket(0n);
-} catch (error) {
-  console.error(error.code, error.message);
-}
-// Hủy subscription khi component unmount.
-unsubscribeTx();
-```
-
-Một instance dịch vụ chỉ cho phép một giao dịch ghi đang xử lý. Trạng thái lần lượt `preparing` → `awaiting_signature` → `pending` → `success` hoặc `error`. Chỉ phát `success` sau receipt có `status === 1` và giải mã được event từ đúng địa chỉ contract. `awaiting_signature` cũng có thể bao gồm thời gian chuẩn bị/gas estimation trước khi ví hiện yêu cầu ký.
-
-| Thao tác thành công | `refresh` |
-| --- | --- |
-| Tạo tour | `['tours']` |
-| Mua vé | `['tours', 'myTickets']` |
-| Sử dụng vé | `['myTickets']` |
-
-Dịch vụ cung cấp tín hiệu `refresh`; UI thực hiện tải lại danh sách/chi tiết và trạng thái vé đang hiển thị. Admin không thể dùng `getMyTickets()` để đọc vé khách hàng: cần làm mới nguồn dữ liệu vé đang dùng trên UI nếu có; đặc tả hiện không có hàm tra cứu mọi vé hoặc tra vé bất kỳ theo ID.
-
-Giao dịch có thể xác nhận sau khi người dùng đổi ví. `state.account` ghi nhận tài khoản gửi ban đầu; UI tải lại vé cho tài khoản đang kết nối và bỏ qua kết quả đọc cũ. Nếu có `txHash` nhưng chờ receipt gặp lỗi RPC, trạng thái giao dịch có thể chưa rõ: kiểm tra lại hash trước khi gửi lần nữa.
-
-Nếu receipt đã thành công nhưng thiếu event mong đợi, dịch vụ báo `RECEIPT_EVENT_MISSING` với `confirmed: true` và tín hiệu `refresh`. Không tự gửi lại giao dịch; kiểm tra ABI và tải lại dữ liệu. Giao dịch tăng phí được nhận diện qua receipt thay thế; giao dịch hủy/thay thao tác khác báo lỗi tương ứng.
-
-## Lỗi và kiểm thử
-
-`IntegrationError` có `code`, `message` tiếng Việt, và `cause` khi có lỗi gốc. Module giải mã 12 custom error trong quy ước, cùng lỗi từ chối, thiếu tiền, sai mạng, mất RPC, chưa kết nối ví và đang có giao dịch chờ. Revert không giải mã được vẫn có thông báo dự phòng. Khi thay ABI compile, các error bổ sung của contract như chống reentrancy dùng thông báo dự phòng nếu chưa có bản dịch.
-
-`npm test` chạy kiểm thử Node với provider/contract mô phỏng, dùng Interface ethers thật để encode/decode ABI, event và error. `npm run test:contracts` chạy bộ Hardhat riêng; test `test/contracts/TourTicketService.ts` gọi service thật với Solidity triển khai trên EVM mô phỏng, kiểm tra quyền tạo tour, mua vé ID 0, tiền về admin và dùng vé. Build trước rồi kiểm tra kiểu bằng `npm run typecheck:contracts`; test TypeScript nằm riêng để Mocha không chạy nhầm các test Node.
-
-Chưa gửi giao dịch lên testnet hoặc kiểm chứng toàn bộ hành vi reentrancy/hoàn tác chuyển tiền và extension MetaMask thật. Sau bàn giao deployment, cập nhật ABI từ đúng bản compile và chạy đủ 10 mục nghiệm thu trong quy ước.
-
-Tham khảo API: [ethers v6](https://docs.ethers.org/v6/getting-started/) và [MetaMask provider](https://docs.metamask.io/metamask-connect/evm/reference/provider-api/).
+`getTours()` và danh sách vé hiện trả toàn bộ dữ liệu của deployment; giao diện và event scanning phù hợp phạm vi v1.0. Khi dữ liệu tăng lớn cần thiết kế phân trang/indexer trước khi mở rộng. RPC cần hỗ trợ eth_call, eth_getLogs và truy cập từ trình duyệt. Việc triển khai testnet thực tế và kiểm tra extension MetaMask bằng tay là bước vận hành sau kiểm thử local.

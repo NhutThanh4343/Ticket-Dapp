@@ -1,5 +1,7 @@
 # Dependencies and frontend build
 node_modules/
+.local/
+/deployments/31337.json
 dist/
 /bundle
 

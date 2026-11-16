@@ -4,9 +4,9 @@ import { readFrontendSettings } from '../src/config/frontend.js';
 import { withTourContent } from '../src/data/tourContent.js';
 import { escapeHtml, formatDeparture, formatPrice, hasDeparted, remainingTickets } from '../src/ui/format.js';
 
-test('frontend chooses explicit demo or blockchain mode without masking missing config', () => {
-  assert.equal(readFrontendSettings({}).mode, 'demo');
-  assert.equal(readFrontendSettings({ VITE_DATA_MODE: 'demo' }).error, null);
+test('frontend requires blockchain config and rejects sample-data mode', () => {
+  assert.equal(readFrontendSettings({}).mode, 'blockchain');
+  assert.equal(readFrontendSettings({ VITE_DATA_MODE: 'demo' }).error.code, 'CONFIG_ERROR');
   const chain = readFrontendSettings({ VITE_DATA_MODE: 'blockchain' });
   assert.equal(chain.mode, 'blockchain');
   assert.equal(chain.error.code, 'CONFIG_ERROR');

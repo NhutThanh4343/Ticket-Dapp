@@ -86,7 +86,7 @@ test('configuration has no deployment defaults and validates exact integer chain
     VITE_CONTRACT_ADDRESS: address, VITE_ADMIN_ADDRESS: admin,
   };
   assert.deepEqual(readBlockchainConfig(env), config);
-  for (const value of ['0', '-1', '1.2', '1e3']) {
+  for (const value of ['0', '-1', '1.2', '1e3', '1']) {
     assert.throws(() => readBlockchainConfig({ ...env, VITE_CHAIN_ID: value }), hasCode('CONFIG_ERROR'));
   }
   assert.throws(() => readBlockchainConfig({ ...env, VITE_RPC_URL: 'file:///tmp/rpc' }), hasCode('CONFIG_ERROR'));
@@ -171,6 +171,26 @@ test('public reads do not access the wallet; empty arrays and ID zero are valid'
   assert.ok(calls.some(([name, id]) => name === 'getTour' && id === 0n));
   contract.getTours = async () => [];
   assert.deepEqual(await service.listTours(), []);
+});
+
+test('ticket history retries restricted RPC ranges without skipping events or hiding other errors', async () => {
+  const { service, contract, rpc } = fixture();
+  config.deploymentBlock = 100;
+  rpc.getBlockNumber = async () => 125;
+  const ranges = [];
+  contract.filters = { TicketPurchased: () => 'purchases' };
+  contract.tickets = async () => ticket;
+  contract.queryFilter = async (_filter, from, to) => {
+    ranges.push([from, to]);
+    if (to - from >= 10) throw { code: 'UNKNOWN_ERROR', info: { error: { message: 'eth_getLogs requests with up to a 10 block range.' } } };
+    return from === 110 ? [receipt('TicketPurchased', [0n, 0n, buyer, tour.price]).logs[0]] : [];
+  };
+  try {
+    assert.deepEqual(await service.listTickets(), [ticket]);
+    assert.deepEqual(ranges, [[100, 125], [100, 109], [110, 119], [120, 125]]);
+    contract.queryFilter = async () => { throw { code: 'NETWORK_ERROR' }; };
+    await assert.rejects(service.listTickets(), hasCode('RPC_ERROR'));
+  } finally { delete config.deploymentBlock; }
 });
 
 test('real ethers Contract reads public tuples and sends the current caller for getMyTickets', async () => {

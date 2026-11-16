@@ -1,4 +1,3 @@
-import { demoTours } from '../data/demoTours.js';
 import { defaultTourImage, withTourContent } from '../data/tourContent.js';
 import { toIntegrationError } from '../blockchain/errors.js';
 import { escapeHtml as html, formatDeparture, formatPrice, hasDeparted, remainingTickets, shortAddress } from './format.js';
@@ -28,9 +27,9 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
   let toastTimer;
   let clock;
   let lastDepartures = '';
+  let pollTicks = 0;
   const subscriptions = [];
-  const isDemo = settings.mode === 'demo';
-  const canReadChain = !isDemo && !settings.error;
+  const canReadChain = !settings.error;
   const isBusy = () => busyStatuses.has(state.transaction.status);
   const on = (node, event, listener, options = {}) => node.addEventListener(event, listener, { ...options, signal: abort.signal });
 
@@ -46,18 +45,17 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
 
   function renderConnection() {
     const connected = state.wallet.connected;
-    $('tc-data-mode').textContent = isDemo ? 'CHẾ ĐỘ DEMO' : 'CHẾ ĐỘ BLOCKCHAIN';
-    $('tc-source-label').textContent = isDemo ? 'DỮ LIỆU MINH HỌA · KHÔNG GỬI GIAO DỊCH' : 'NGUỒN DỮ LIỆU: BLOCKCHAIN';
-    const message = isDemo ? 'Bạn đang xem tour minh họa. Kết nối ví và mua vé chưa được bật trong chế độ này.'
-      : settings.error ? 'Kết nối blockchain chưa được cấu hình đầy đủ. Hiện chưa thể tải tour hoặc giao dịch.'
+    $('tc-data-mode').textContent = settings.error ? 'CHƯA CẤU HÌNH MẠNG' : settings.config.chainId === 31337n ? 'BLOCKCHAIN LOCAL' : 'SEPOLIA';
+    $('tc-source-label').textContent = 'NGUỒN DỮ LIỆU: BLOCKCHAIN';
+    const message = settings.error ? 'Kết nối blockchain chưa được cấu hình đầy đủ. Hiện chưa thể tải tour hoặc giao dịch.'
       : state.walletMessage || (!connected ? 'Bạn có thể xem tour ngay. Kết nối MetaMask để mua và xem vé.'
         : !state.wallet.isCorrectNetwork ? 'Ví đang ở mạng khác. Hãy chuyển sang mạng của hệ thống để mua và xem vé.'
           : `Đã kết nối ${shortAddress(state.wallet.account)} · Mạng ${state.wallet.chainId.toString()}`);
     $('tc-connection-message').textContent = message;
     $('tc-connection-message').classList.toggle('tc-error-text', Boolean(settings.error || (connected && !state.wallet.isCorrectNetwork)));
-    $('tc-wallet-label').textContent = isDemo ? 'Chế độ demo' : state.walletBusy ? 'Đang xử lý ví…'
+    $('tc-wallet-label').textContent = state.walletBusy ? 'Đang xử lý ví…'
       : connected ? shortAddress(state.wallet.account) : 'Kết nối MetaMask';
-    $('tc-connect').disabled = isDemo || Boolean(settings.error) || state.walletBusy || isBusy();
+    $('tc-connect').disabled = Boolean(settings.error) || state.walletBusy || isBusy();
     $('tc-switch-network').hidden = !canReadChain || !connected || state.wallet.isCorrectNetwork;
     $('tc-switch-network').disabled = state.walletBusy || isBusy();
     $('tc-disconnect').hidden = !connected;
@@ -121,8 +119,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
     let label = 'Mua 01 vé';
     let message = 'Mỗi giao dịch mua một vé. Chỉ ghi nhận vé sau khi blockchain xác nhận.';
     let disabled = false;
-    if (isDemo) { label = 'Chỉ xem minh họa'; message = 'Đây là dữ liệu demo. Không kết nối ví hoặc gửi giao dịch mua vé.'; disabled = true; }
-    else if (settings.error) { message = 'Chưa có cấu hình kết nối blockchain.'; disabled = true; }
+    if (settings.error) { message = 'Chưa có cấu hình kết nối blockchain.'; disabled = true; }
     else if (state.detailLoading || state.toursLoading) { label = 'Đang cập nhật tour…'; message = 'Đang đọc giá và tình trạng vé mới nhất.'; disabled = true; }
     else if (state.detailError || state.toursError) { message = state.detailError || state.toursError; disabled = true; }
     else if (isBusy()) { label = state.transaction.status === 'pending' ? 'Đang chờ xác nhận…' : 'Đang xử lý…'; message = transactionMessage(); disabled = true; }
@@ -156,8 +153,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
   function renderTickets() {
     const list = $('tc-ticket-list');
     list.setAttribute('aria-busy', String(state.ticketsLoading));
-    if (isDemo) list.innerHTML = messageCard('Vé chưa được bật trong chế độ demo', 'Dữ liệu tour đang là minh họa; chưa có vé blockchain để hiển thị.');
-    else if (settings.error) list.innerHTML = messageCard('Chưa thể tải vé', 'Kết nối blockchain chưa được cấu hình.', true);
+    if (settings.error) list.innerHTML = messageCard('Chưa thể tải vé', 'Kết nối blockchain chưa được cấu hình.', true);
     else if (!state.wallet.connected) list.innerHTML = messageCard('Kết nối ví để xem vé', 'Các vé đã mua sẽ xuất hiện theo tài khoản MetaMask đang kết nối.');
     else if (!state.wallet.isCorrectNetwork) list.innerHTML = messageCard('Hãy chuyển mạng để xem vé', 'Ví đang ở mạng khác với hệ thống.');
     else if (state.ticketsLoading) list.innerHTML = messageCard('Đang tải vé của bạn…', 'Đang đọc dữ liệu cho ví hiện tại.');
@@ -179,7 +175,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
     renderTours(); renderConnection(); renderBuy();
     try {
       if (settings.error) throw settings.error;
-      const result = isDemo ? demoTours : await tickets.listTours();
+      const result = await tickets.listTours();
       if (!alive || request !== toursRequest) return;
       state.tours = result.map(withTourContent);
       if (state.selectedTour) {
@@ -320,6 +316,10 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
       renderBuy();
       const departures = state.tours.map((tour) => hasDeparted(tour)).join(',');
       if (departures !== lastDepartures) { lastDepartures = departures; renderTours(); }
+      if (++pollTicks % 15 === 0 && canReadChain && !isBusy() && document.visibilityState === 'visible') {
+        if (!state.toursLoading) void loadTours();
+        if (!state.ticketsLoading) void loadMyTickets();
+      }
     }, 1000);
     const loading = loadTours();
     if (canReadChain) {

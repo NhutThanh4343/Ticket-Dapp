@@ -4,367 +4,50 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2b">
-  <title>TourChain — Đặt vé du lịch & Quản trị Blockchain</title>
+  <meta name="description" content="Đặt và quản lý vé du lịch với MetaMask và blockchain.">
+  <title>TourChain — Đặt vé du lịch</title>
   <link rel="stylesheet" href="./styles.css">
-  <!-- Charts are presentation data only until admin integration is implemented. -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script type="module" src="./app.js"></script>
 </head>
-<body class="tc-body">
+<body>
   <header class="tc-header">
     <div class="tc-wrap tc-nav">
-      <a class="tc-brand" href="#home" data-tc-home>
-        <span class="tc-brand-mark">T</span>
-        <span>TourChain<span class="tc-dot">.</span><small id="tc-brand-sub">TRAVEL ON CHAIN</small></span>
-      </a>
-
-      <!-- Customer Navigation Links -->
-      <nav id="tc-customer-nav" class="tc-nav-links" aria-label="Điều hướng Khách hàng">
-        <a class="is-active" href="#home">Trang chủ</a>
-        <a href="#tours">Khám phá tour</a>
-        <a href="#my-tickets">Vé của tôi</a>
+      <a class="tc-brand" href="#home" id="tc-home"><span class="tc-brand-mark">T</span><span>TourChain<span class="tc-dot">.</span><small id="tc-brand-sub">TRAVEL ON CHAIN</small></span></a>
+      <nav id="tc-customer-nav" class="tc-nav-links" aria-label="Điều hướng"><a href="#home">Trang chủ</a><a href="#tours">Khám phá tour</a><a href="#my-tickets">Vé của tôi</a></nav>
+      <nav id="tc-admin-nav" class="tc-nav-links tc-admin-nav-links" aria-label="Quản trị" hidden>
+        <button class="tc-admin-nav-btn active" data-tc-admin-tab="overview">Tổng quan</button>
+        <button class="tc-admin-nav-btn" data-tc-admin-tab="create-tour">Tạo tour</button>
+        <button class="tc-admin-nav-btn" data-tc-admin-tab="checkin">Sử dụng vé</button>
       </nav>
-
-      <!-- Admin Navigation Links (Hidden in Customer Mode) -->
-      <nav id="tc-admin-nav" class="tc-nav-links tc-admin-nav-links" style="display: none;" aria-label="Điều hướng Admin">
-        <button class="tc-admin-nav-btn active" data-tc-admin-tab="overview">📊 Tổng quan</button>
-        <button class="tc-admin-nav-btn" data-tc-admin-tab="create-tour">➕ Tạo & Mint Tour</button>
-        <button class="tc-admin-nav-btn" data-tc-admin-tab="checkin">🔍 Check-in Vé</button>
-        <button class="tc-admin-nav-btn" data-tc-admin-tab="contract">⚙️ Smart Contract</button>
-      </nav>
-
-      <div class="tc-header-actions">
-        <!-- Account / Switch Role Button -->
-        <button id="tc-login-btn" class="tc-role-toggle-btn">
-          <span id="tc-user-badge" class="tc-badge-customer">👤 User</span>
-          <span>Xem giao diện</span>
-        </button>
-
-        <!-- MetaMask Wallet Button -->
-        <button id="tc-connect" class="tc-wallet">
-          <span aria-hidden="true">◇</span>
-          <span id="tc-wallet-label">Kết nối MetaMask</span>
-        </button>
-      </div>
+      <div class="tc-header-actions"><button id="tc-admin-open" class="tc-role-toggle-btn" hidden>Quản trị</button><button id="tc-connect" class="tc-wallet"><span aria-hidden="true">◇</span><span id="tc-wallet-label">Kết nối MetaMask</span></button></div>
     </div>
   </header>
-
+  <section class="tc-wrap tc-connection" aria-label="Trạng thái kết nối">
+    <div><strong id="tc-data-mode" class="tc-mode-badge">Đang kết nối</strong><p id="tc-connection-message" role="status" aria-live="polite"></p></div>
+    <div class="tc-connection-actions"><button id="tc-switch-network" class="tc-action" hidden>Chuyển mạng</button><button id="tc-disconnect" class="tc-action" hidden>Ngắt kết nối</button><button id="tc-refresh" class="tc-action">Tải lại dữ liệu</button></div>
+  </section>
+  <section id="tc-transaction" class="tc-wrap tc-transaction" aria-label="Trạng thái giao dịch" aria-live="polite" hidden><strong id="tc-transaction-message"></strong><span id="tc-transaction-account"></span><code id="tc-transaction-hash"></code></section>
   <main id="tc-customer-view">
-    <section class="tc-wrap tc-connection" aria-label="Trạng thái kết nối">
-      <div><strong id="tc-data-mode" class="tc-mode-badge">Đang khởi tạo</strong><p id="tc-connection-message" role="status" aria-live="polite"></p></div>
-      <div class="tc-connection-actions">
-        <button id="tc-switch-network" class="tc-action" hidden>Chuyển mạng</button>
-        <button id="tc-disconnect" class="tc-action" hidden>Ngắt kết nối</button>
-        <button id="tc-refresh" class="tc-action">Tải lại dữ liệu</button>
-      </div>
-    </section>
-    <section id="tc-transaction" class="tc-wrap tc-transaction" aria-label="Trạng thái giao dịch" aria-live="polite" hidden>
-      <strong id="tc-transaction-message"></strong><span id="tc-transaction-account"></span><code id="tc-transaction-hash"></code>
-    </section>
-    <section class="tc-hero" id="home">
-      <div class="tc-hero-image"></div>
-      <div class="tc-hero-overlay"></div>
-      <div class="tc-wrap tc-hero-content">
-        <p class="tc-eyebrow"><span></span> DU LỊCH · CÔNG NGHỆ · TỰ DO</p>
-        <h1>Hành trình mới.<br><em>Quyền sở hữu của bạn.</em></h1>
-        <p class="tc-hero-copy">Khám phá những điểm đến đáng nhớ và quản lý vé du lịch minh bạch với công nghệ blockchain.</p>
-        <div class="tc-hero-actions">
-          <a class="tc-btn tc-btn-light" href="#tours">Khám phá tour <span>↗</span></a>
-          <a class="tc-text-link" href="#how-it-works">Cách hoạt động <span>↓</span></a>
-        </div>
-        <div class="tc-hero-stats">
-          <div><strong>01</strong><span>Kết nối ví</span></div>
-          <div><strong>02</strong><span>Chọn hành trình</span></div>
-          <div><strong>03</strong><span>Sở hữu vé số</span></div>
-        </div>
-      </div>
-      <div class="tc-hero-side-note">EXPLORE WITH CONFIDENCE — 2026</div>
-    </section>
-
-    <section class="tc-wrap tc-intro-strip" id="how-it-works">
-      <div class="tc-strip-title">
-        <span class="tc-mini-label">VÌ SAO TOURCHAIN?</span>
-        <h2>Du lịch theo<br>cách của bạn.</h2>
-      </div>
-      <article class="tc-benefit">
-        <span class="tc-benefit-number">01 /</span>
-        <div>
-          <h3>Minh bạch</h3>
-          <p>Thông tin tour và trạng thái vé có thể kiểm tra từ blockchain.</p>
-        </div>
-      </article>
-      <article class="tc-benefit">
-        <span class="tc-benefit-number">02 /</span>
-        <div>
-          <h3>Ví của bạn</h3>
-          <p>Kết nối MetaMask để thực hiện giao dịch bằng chính ví của mình.</p>
-        </div>
-      </article>
-      <article class="tc-benefit">
-        <span class="tc-benefit-number">03 /</span>
-        <div>
-          <h3>Quản lý dễ dàng</h3>
-          <p>Theo dõi các vé đã mua và trạng thái sử dụng tại một nơi.</p>
-        </div>
-      </article>
-    </section>
-
-    <section class="tc-discover" id="tours">
-      <div class="tc-wrap">
-        <div class="tc-section-head">
-          <div>
-            <p class="tc-mini-label">CHỌN ĐIỂM ĐẾN TIẾP THEO</p>
-            <h2>Những hành trình<br><em>đang chờ bạn.</em></h2>
-          </div>
-          <div class="tc-search-area">
-            <label for="tc-search">Tìm theo tên hoặc địa điểm</label>
-            <div class="tc-search">
-              <span>⌕</span>
-              <input id="tc-search" type="search" placeholder="Ví dụ: Đà Lạt, Phú Quốc...">
-              <button id="tc-clear-search" aria-label="Xóa tìm kiếm">×</button>
-            </div>
-          </div>
-        </div>
-        <div id="tc-tour-grid" class="tc-tour-grid" aria-live="polite"></div>
-        <div class="tc-list-footer"><span id="tc-count">Đang tải tour...</span><span id="tc-source-label" class="tc-demo-label"></span></div>
-      </div>
-    </section>
-
-    <section class="tc-my-tickets" id="my-tickets">
-      <div class="tc-wrap tc-ticket-layout">
-        <div><p class="tc-mini-label">HÀNH TRÌNH CỦA RIÊNG BẠN</p><h2>Vé của tôi<span class="tc-dot">.</span></h2><p class="tc-muted">Vé được truy vấn theo địa chỉ ví đang kết nối.</p><button id="tc-refresh-tickets" class="tc-action">Tải lại vé</button></div>
-        <div id="tc-ticket-list" class="tc-ticket-list" aria-live="polite"></div>
-      </div>
-    </section>
+    <section class="tc-hero" id="home"><div class="tc-hero-image"></div><div class="tc-hero-overlay"></div><div class="tc-wrap tc-hero-content"><p class="tc-eyebrow"><span></span> DU LỊCH · CÔNG NGHỆ · TỰ DO</p><h1>Hành trình mới.<br><em>Quyền sở hữu của bạn.</em></h1><p class="tc-hero-copy">Khám phá những điểm đến đáng nhớ và quản lý vé du lịch minh bạch trên blockchain.</p><div class="tc-hero-actions"><a class="tc-btn tc-btn-light" href="#tours">Khám phá tour ↗</a><a class="tc-text-link" href="#how-it-works">Cách hoạt động ↓</a></div><div class="tc-hero-stats"><div><strong>01</strong><span>Kết nối ví</span></div><div><strong>02</strong><span>Chọn hành trình</span></div><div><strong>03</strong><span>Nhận vé</span></div></div></div></section>
+    <section class="tc-wrap tc-intro-strip" id="how-it-works"><div class="tc-strip-title"><span class="tc-mini-label">VÌ SAO TOURCHAIN?</span><h2>Du lịch theo<br>cách của bạn.</h2></div><article class="tc-benefit"><span class="tc-benefit-number">01 /</span><div><h3>Minh bạch</h3><p>Giá, số vé và trạng thái sử dụng được xác nhận trên chuỗi.</p></div></article><article class="tc-benefit"><span class="tc-benefit-number">02 /</span><div><h3>Ví của bạn</h3><p>Kết nối MetaMask và xác nhận giao dịch bằng ví của mình.</p></div></article><article class="tc-benefit"><span class="tc-benefit-number">03 /</span><div><h3>Một nơi quản lý</h3><p>Theo dõi tất cả vé đã mua, bao gồm cả vé đã sử dụng.</p></div></article></section>
+    <section class="tc-discover" id="tours"><div class="tc-wrap"><div class="tc-section-head"><div><p class="tc-mini-label">CHỌN ĐIỂM ĐẾN TIẾP THEO</p><h2>Những hành trình<br><em>đang chờ bạn.</em></h2></div><div class="tc-search-area"><label for="tc-search">Tìm theo tên hoặc địa điểm</label><div class="tc-search"><span aria-hidden="true">⌕</span><input id="tc-search" type="search" placeholder="Nhập tên tour…"><button id="tc-clear-search" aria-label="Xóa tìm kiếm">×</button></div></div></div><div id="tc-tour-grid" class="tc-tour-grid" aria-live="polite"></div><div class="tc-list-footer"><span id="tc-count">Đang tải tour…</span><span id="tc-source-label" class="tc-demo-label"></span></div></div></section>
+    <section class="tc-my-tickets" id="my-tickets"><div class="tc-wrap tc-ticket-layout"><div><p class="tc-mini-label">HÀNH TRÌNH CỦA RIÊNG BẠN</p><h2>Vé của tôi<span class="tc-dot">.</span></h2><p class="tc-muted">Vé thuộc tài khoản MetaMask hiện tại.</p><button id="tc-refresh-tickets" class="tc-action">Tải lại vé</button></div><div id="tc-ticket-list" class="tc-ticket-list" aria-live="polite"></div></div></section>
   </main>
-
-  <!-- 2. ADMIN DASHBOARD INTERFACE (DARK THEME) -->
-  <main id="tc-admin-view" class="tc-admin-container" style="display: none;">
+  <main id="tc-admin-view" class="tc-admin-container" hidden>
     <div class="tc-wrap">
-      <div class="tc-admin-preview-notice" role="status">
-        <strong>GIAO DIỆN ADMIN MINH HỌA · CHƯA TÍCH HỢP</strong>
-        <p>Các số liệu, biểu đồ và nhật ký bên dưới là dữ liệu mẫu. Chuyển giao diện không cấp quyền quản trị; các thao tác tạo tour, check-in và quản lý contract chưa được bật.</p>
-      </div>
-      <div class="tc-admin-banner">
-        <div>
-          <span class="tc-mini-label">DAPP ADMIN DASHBOARD</span>
-          <h2>Quản trị Bán vé Du lịch Blockchain</h2>
-          <p class="tc-admin-subtext">Quản lý Tour, Mint NFT Ticket, Xác thực Check-in QR & Cấu hình Smart Contract On-Chain.</p>
-        </div>
-        <div class="tc-admin-status-box">
-          <span class="tc-status-dot"></span>
-          <div>
-            <strong id="tc-admin-contract-addr">Admin chưa tích hợp</strong>
-            <small>Chỉ xem trước giao diện</small>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 1: OVERVIEW & ANALYTICS -->
+      <div class="tc-admin-banner"><div><span class="tc-mini-label">TOURCHAIN ADMIN</span><h2>Quản lý tour và vé</h2><p class="tc-admin-subtext">Dữ liệu đọc trực tiếp từ contract. Mọi thay đổi cần ví admin xác nhận.</p></div><button id="tc-admin-refresh" class="tc-action">Tải lại quản trị</button></div>
+      <p id="tc-admin-message" class="tc-admin-message" role="status" aria-live="polite"></p>
       <section id="tc-admin-tab-overview" class="tc-admin-tab-content">
-        <div class="tc-admin-grid-4">
-          <div class="tc-stat-card">
-            <span class="tc-stat-title">Tổng doanh thu Vé</span>
-            <div class="tc-stat-value">128.45 ETH</div>
-            <span class="tc-stat-sub positive">↑ +14.2% so với tháng trước</span>
-          </div>
-          <div class="tc-stat-card">
-            <span class="tc-stat-title">Vé NFT đã Mint</span>
-            <div class="tc-stat-value">1,420 / 2,000</div>
-            <span class="tc-stat-sub">Tỷ lệ lấp đầy: 71%</span>
-          </div>
-          <div class="tc-stat-card">
-            <span class="tc-stat-title">Vé đã Check-in QR</span>
-            <div class="tc-stat-value">982 Vé</div>
-            <span class="tc-stat-sub positive">✓ Hợp lệ On-chain 100%</span>
-          </div>
-          <div class="tc-stat-card">
-            <span class="tc-stat-title">Phí Royalty Tích lũy</span>
-            <div class="tc-stat-value">3.12 ETH</div>
-            <span class="tc-stat-sub">Sàn thứ cấp (5%)</span>
-          </div>
-        </div>
-
-        <div class="tc-admin-grid-2" style="margin-top: 24px;">
-          <div class="tc-admin-card">
-            <h3>Biểu đồ Doanh số bán vé theo Tuần (ETH)</h3>
-            <div class="tc-chart-wrapper"><canvas id="tcAdminSalesChart"></canvas></div>
-          </div>
-          <div class="tc-admin-card">
-            <h3>Phân bổ Tour Du lịch</h3>
-            <div class="tc-chart-wrapper"><canvas id="tcAdminCategoryChart"></canvas></div>
-          </div>
-        </div>
+        <div class="tc-admin-grid-4"><article class="tc-stat-card"><span class="tc-stat-title">Tour đã tạo</span><div id="tc-stat-tours" class="tc-stat-value">—</div></article><article class="tc-stat-card"><span class="tc-stat-title">Vé đã bán</span><div id="tc-stat-sold" class="tc-stat-value">—</div></article><article class="tc-stat-card"><span class="tc-stat-title">Doanh thu đã chuyển admin</span><div id="tc-stat-revenue" class="tc-stat-value">—</div></article><article class="tc-stat-card"><span class="tc-stat-title">Vé đã sử dụng</span><div id="tc-stat-used" class="tc-stat-value">—</div></article></div>
+        <article class="tc-admin-card tc-panel"><h3>Tour và tình trạng mở bán</h3><div class="tc-table-scroll"><table class="tc-table"><thead><tr><th>ID</th><th>Tour</th><th>Khởi hành</th><th>Giá vé</th><th>Đã bán / Tổng</th></tr></thead><tbody id="tc-admin-tours"></tbody></table></div></article>
+        <article class="tc-admin-card tc-panel"><h3>Vé đã phát hành</h3><div class="tc-table-scroll"><table class="tc-table"><thead><tr><th>Mã vé</th><th>Tour</th><th>Ví sở hữu</th><th>Trạng thái</th></tr></thead><tbody id="tc-admin-tickets"></tbody></table></div></article>
       </section>
-
-      <!-- TAB 2: CREATE & MINT NEW TOUR -->
-      <section id="tc-admin-tab-create-tour" class="tc-admin-tab-content" style="display: none;">
-        <div class="tc-admin-card">
-          <h3>Tạo Tour Du Lịch & Phát hành NFT Ticket Mới</h3>
-          <p class="tc-admin-subtext">Thông tin này sẽ được lưu giữ trên IPFS và ghi nhận vào Smart Contract.</p>
-
-          <form id="tc-admin-mint-form" class="tc-admin-form">
-            <div class="tc-form-row">
-              <div class="tc-form-group">
-                <label>Tên Tour du lịch *</label>
-                <input type="text" id="tcMintName" required placeholder="">
-              </div>
-              <div class="tc-form-group">
-                <label>Địa điểm / Hành trình *</label>
-                <input type="text" id="tcMintLocation" required placeholder="">
-              </div>
-            </div>
-
-            <div class="tc-form-row">
-              <div class="tc-form-group">
-                <label>Giá vé Mint (ETH) *</label>
-                <input type="number" id="tcMintPrice" step="0.001" required placeholder="">
-              </div>
-              <div class="tc-form-group">
-                <label>Tổng số vé phát hành (Max Supply) *</label>
-                <input type="number" id="tcMintSupply" required placeholder="">
-              </div>
-            </div>
-
-            <div class="tc-form-row">
-              <div class="tc-form-group">
-                <label>Thẻ phân loại (Tag)</label>
-                <input type="text" id="tcMintTag" placeholder="">
-              </div>
-              <div class="tc-form-group">
-                <label>Link Ảnh Tour (URL / Unsplash)</label>
-                <input type="url" id="tcMintImage" placeholder="">
-              </div>
-            </div>
-
-            <div class="tc-form-group">
-              <label>Mô tả chi tiết tour</label>
-              <textarea id="tcMintDesc" rows="3" placeholder=""></textarea>
-            </div>
-
-            <div class="tc-form-actions">
-              <button type="submit" class="tc-btn tc-btn-dark">⚡ Mint & Phát hành Tour On-Chain</button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- TAB 3: QR CHECK-IN & VERIFICATION -->
-      <section id="tc-admin-tab-checkin" class="tc-admin-tab-content" style="display: none;">
-        <div class="tc-admin-grid-2">
-          <div class="tc-admin-card">
-            <h3>Xác thực Vé NFT Check-in</h3>
-            <p class="tc-admin-subtext">Nhập Mã Ticket ID hoặc Hash chữ ký ví khách hàng để xác thực tính hợp lệ trên Blockchain.</p>
-
-            <div class="tc-checkin-box">
-              <div class="tc-qr-icon">🔍</div>
-              <input type="text" id="tcCheckinTokenId" placeholder="" class="tc-input-lg">
-              <button class="tc-btn tc-btn-light tc-btn-wide">Thực hiện Check-in</button>
-            </div>
-          </div>
-
-          <div class="tc-admin-card">
-            <h3>Nhật ký Check-in gần nhất</h3>
-            <div id="tcCheckinLog" class="tc-log-list">
-              <div class="tc-log-item">
-                <span>Token #1023 (Tour Phong Nha)</span>
-                <span class="tc-tag-success">Thành công</span>
-              </div>
-              <div class="tc-log-item">
-                <span>Token #1022 (Tour Đà Nẵng)</span>
-                <span class="tc-tag-success">Thành công</span>
-              </div>
-              <div class="tc-log-item">
-                <span>Token #0981 (Tour Phu Quoc)</span>
-                <span class="tc-tag-danger">Đã dùng trước đó</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: CONTRACT OWNER SETTINGS -->
-      <section id="tc-admin-tab-contract" class="tc-admin-tab-content" style="display: none;">
-        <div class="tc-admin-card">
-          <h3>Quản trị Smart Contract</h3>
-          <p class="tc-admin-subtext">Quyền Admin / Contract Owner</p>
-
-          <div class="tc-setting-item">
-            <div>
-              <strong>Tạm dừng Smart Contract (Pause Contract)</strong>
-              <p id="tcContractStateText" class="tc-admin-subtext">Ngăn chặn toàn bộ giao dịch Mint và chuyển nhượng khi có sự cố.</p>
-            </div>
-            <button id="tcPauseContractBtn" class="tc-btn tc-btn-danger">Tạm dừng Smart Contract</button>
-          </div>
-
-          <hr class="tc-divider">
-
-          <div class="tc-setting-item">
-            <div>
-              <strong>Rút doanh thu về ví Admin (Withdraw ETH)</strong>
-              <p class="tc-admin-subtext">Số dư hiện tại trên Contract: <strong id="tcContractEthBalance" style="color:#d8f36a;">42.8 ETH</strong></p>
-            </div>
-            <button class="tc-btn tc-btn-light">Rút Quỹ (Withdraw)</button>
-          </div>
-        </div>
-      </section>
-
+      <section id="tc-admin-tab-create-tour" class="tc-admin-tab-content" hidden><article class="tc-admin-card"><h3>Tạo tour và mở bán vé</h3><form id="tc-admin-create-form" class="tc-admin-form"><div class="tc-form-group"><label for="tc-create-name">Tên tour</label><input id="tc-create-name" name="name" required maxlength="200"></div><div class="tc-form-group"><label for="tc-create-departure">Giờ khởi hành (múi giờ của bạn)</label><input id="tc-create-departure" name="departure" type="datetime-local" required></div><div class="tc-form-row"><div class="tc-form-group"><label for="tc-create-price">Giá một vé (ETH)</label><input id="tc-create-price" name="price" type="text" inputmode="decimal" required placeholder="0.01"></div><div class="tc-form-group"><label for="tc-create-count">Số vé mở bán</label><input id="tc-create-count" name="count" type="text" inputmode="numeric" pattern="[0-9]+" required></div></div><button id="tc-create-submit" type="submit" class="tc-btn tc-btn-light">Tạo tour trên blockchain</button></form></article></section>
+      <section id="tc-admin-tab-checkin" class="tc-admin-tab-content" hidden><article class="tc-admin-card"><h3>Xác nhận sử dụng vé</h3><p class="tc-admin-subtext">Tra mã vé, đối chiếu người xuất trình với ví sở hữu trước khi xác nhận. Biết mã vé hoặc địa chỉ ví chưa chứng minh quyền sở hữu.</p><form id="tc-admin-lookup-form" class="tc-admin-form"><div class="tc-form-group"><label for="tc-checkin-id">Mã vé</label><input id="tc-checkin-id" type="text" inputmode="numeric" pattern="[0-9]+" required></div><button id="tc-lookup-submit" type="submit" class="tc-btn tc-btn-light">Tra cứu vé</button></form><div id="tc-checkin-result" class="tc-checkin-result" aria-live="polite"></div><form id="tc-admin-use-form" class="tc-admin-form" hidden><div class="tc-form-group"><label for="tc-checkin-owner">Ví sở hữu đã đối chiếu</label><input id="tc-checkin-owner" type="text" required placeholder="0x…"></div><label class="tc-confirm-label"><input id="tc-checkin-confirm" type="checkbox" required> Tôi đã đối chiếu người trình vé với ví sở hữu.</label><button id="tc-use-submit" class="tc-btn tc-btn-light" type="submit">Xác nhận sử dụng vé</button></form></article></section>
     </div>
   </main>
-
-  <footer class="tc-footer">
-    <div class="tc-wrap tc-footer-inner">
-      <a class="tc-brand tc-brand-footer" href="#home">
-        <span class="tc-brand-mark">T</span>
-        <span>TourChain<span class="tc-dot">.</span><small>TRAVEL ON CHAIN</small></span>
-      </a>
-      <p>Đồ án học tập · Hệ thống bán và quản lý vé du lịch trên Blockchain</p>
-      <span id="tc-footer-tag">TV1 · CUSTOMER & ADMIN SYSTEM</span>
-    </div>
-  </footer>
-
-  <!-- CUSTOMER TOUR DETAIL DIALOG -->
-  <dialog id="tc-tour-dialog" class="tc-dialog">
-    <button id="tc-close-dialog" class="tc-dialog-close" aria-label="Đóng cửa sổ">×</button>
-    <div class="tc-dialog-cover">
-      <img id="tc-dialog-image" src="" alt="">
-      <span id="tc-dialog-tag" class="tc-card-tag"></span>
-    </div>
-    <div class="tc-dialog-content">
-      <p id="tc-dialog-location" class="tc-mini-label"></p>
-      <h2 id="tc-dialog-title"></h2>
-      <p id="tc-dialog-description" class="tc-muted"></p>
-      <div class="tc-detail-facts">
-        <div><span>Khởi hành</span><strong id="tc-dialog-date">Đang cập nhật</strong></div>
-        <div><span>Giá một vé</span><strong id="tc-dialog-price">—</strong></div>
-        <div><span>Vé còn lại</span><strong id="tc-dialog-remaining">—</strong></div>
-      </div>
-      <div class="tc-purchase-note">
-        <span>01 vé / giao dịch</span>
-        <span>Phí gas do người mua thanh toán</span>
-      </div>
-      <button id="tc-buy" class="tc-btn tc-btn-dark tc-btn-wide">Kết nối ví để mua vé <span>↗</span></button>
-      <p id="tc-dialog-message" class="tc-dialog-message" role="status" aria-live="polite"></p>
-    </div>
-  </dialog>
-
-  <!-- Layout preview only; actual authority remains with MetaMask + contract. -->
-  <dialog id="tc-login-modal" class="tc-modal">
-    <div class="tc-modal-content">
-      <div class="tc-modal-header">
-        <h3>Chọn giao diện xem trước</h3>
-        <button id="tc-close-preview" class="tc-dialog-close" aria-label="Đóng chọn giao diện">×</button>
-      </div>
-
-      <p class="tc-admin-subtext">Đây là chuyển màn hình minh họa, không đăng nhập hoặc cấp quyền. Tài khoản thật được xác định bằng ví MetaMask.</p>
-      <div class="tc-modal-form" style="margin-top: 20px;">
-        <button data-tc-preview="user" class="tc-btn tc-btn-light tc-btn-wide">Giao diện khách hàng</button>
-        <button data-tc-preview="admin" class="tc-btn tc-btn-light tc-btn-wide">Xem trước giao diện admin</button>
-      </div>
-    </div>
-  </dialog>
-
-  <!-- Toast Notification -->
+  <footer class="tc-footer"><div class="tc-wrap tc-footer-inner"><a class="tc-brand tc-brand-footer" href="#home"><span class="tc-brand-mark">T</span><span>TourChain<span class="tc-dot">.</span><small>TRAVEL ON CHAIN</small></span></a><p>Đặt vé bằng ví · Xác nhận trên chuỗi</p><span>TOUR & TICKET</span></div></footer>
+  <dialog id="tc-tour-dialog" class="tc-dialog" aria-labelledby="tc-dialog-title"><button id="tc-close-dialog" class="tc-dialog-close" aria-label="Đóng chi tiết tour">×</button><div class="tc-dialog-cover"><img id="tc-dialog-image" alt=""><span id="tc-dialog-tag" class="tc-card-tag"></span></div><div class="tc-dialog-content"><p id="tc-dialog-location" class="tc-mini-label"></p><h2 id="tc-dialog-title"></h2><p id="tc-dialog-description" class="tc-muted"></p><div class="tc-detail-facts"><div><span>Khởi hành</span><strong id="tc-dialog-date">—</strong></div><div><span>Giá một vé</span><strong id="tc-dialog-price">—</strong></div><div><span>Vé còn lại</span><strong id="tc-dialog-remaining">—</strong></div></div><div class="tc-purchase-note"><span>01 vé / giao dịch</span><span>Phí gas thanh toán riêng</span></div><button id="tc-buy" class="tc-btn tc-btn-dark tc-btn-wide">Kết nối ví để mua vé</button><p id="tc-dialog-message" class="tc-dialog-message" role="status" aria-live="polite"></p></div></dialog>
   <div id="tc-toast" class="tc-toast" role="status" aria-live="polite"></div>
 </body>
 </html>
