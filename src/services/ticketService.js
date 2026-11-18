@@ -58,8 +58,11 @@ export function createTicketService({
     try { return await action(); } catch (error) { throw toIntegrationError(error); }
   }
 
-  async function ticketFrom(contract, ticketId) {
-    try { return ticketObject(await contract.tickets(uint(ticketId, 'ID vé'))); }
+  async function ticketFrom(contract, ticketId, blockTag) {
+    try {
+      const id = uint(ticketId, 'ID vé');
+      return ticketObject(await (blockTag === undefined ? contract.tickets(id) : contract.tickets(id, { blockTag })));
+    }
     catch (error) {
       if (error.code === 'CALL_EXCEPTION') throw new IntegrationError('TicketNotFound', 'Vé không tồn tại.', error);
       throw error;
@@ -134,35 +137,18 @@ export function createTicketService({
     readTicket: (ticketId) => read(async () => ticketFrom(await publicContract(), ticketId)),
     listTickets: () => read(async () => {
       const contract = await publicContract();
-      const start = getConfig().deploymentBlock;
-      if (!Number.isSafeInteger(start) || start < 0) throw new IntegrationError('CONFIG_ERROR', 'Thiếu block triển khai contract để truy vấn vé.');
-      const rpc = provider;
-      const latest = await rpc.getBlockNumber();
-      const ids = new Map();
-      let chunkSize = 1000;
-      for (let from = start; from <= latest;) {
-        let logs;
-        try {
-          logs = await contract.queryFilter(contract.filters.TicketPurchased(), from, Math.min(latest, from + chunkSize - 1));
-        } catch (error) {
-          // Some hosted RPC free plans allow only ten blocks per getLogs request.
-          const detail = [error?.message, error?.info?.error?.message, error?.error?.message].join(' ');
-          if (chunkSize > 10 && /block range|range of blocks|limited to.*blocks/i.test(detail)) {
-            chunkSize = 10;
-            continue; // Retry the same range start; never skip ticket events.
-          }
-          throw error;
-        }
-        for (const log of logs) {
-          const parsed = contract.interface.parseLog(log);
-          if (parsed) ids.set(parsed.args.ticketId.toString(), parsed.args.ticketId);
-        }
-        from += chunkSize;
-      }
-      const ordered = [...ids.values()].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+      // This contract appends exactly one ticket and increments soldTickets in
+      // the same transaction. No ticket is deleted, including after check-in.
+      // Thus sum(soldTickets) gives IDs 0..count-1 without scanning old logs.
+      // Pin every read to one block so new purchases cannot change the snapshot.
+      const blockTag = await provider.getBlockNumber();
+      const tours = await contract.getTours({ blockTag });
+      const count = tours.reduce((sum, tour) => sum + tour.soldTickets, 0n);
       const result = [];
-      for (let index = 0; index < ordered.length; index += 20) {
-        result.push(...await Promise.all(ordered.slice(index, index + 20).map((id) => ticketFrom(contract, id))));
+      for (let first = 0n; first < count; first += 20n) {
+        const ids = [];
+        for (let id = first; id < count && id < first + 20n; id++) ids.push(id);
+        result.push(...await Promise.all(ids.map((id) => ticketFrom(contract, id, blockTag))));
       }
       return result;
     }),

@@ -28,8 +28,19 @@ export function mountAdminApp({ document, wallet, tickets, settings }) {
     $('tc-admin-open').hidden = !allowed;
   }
   function tab(id) {
+    const headings = {
+      overview: ['Tổng quan hoạt động', 'Theo dõi hành trình, vé đã bán và doanh thu của bạn.'],
+      'create-tour': ['Mở một hành trình mới', 'Thiết lập thông tin tour và bắt đầu đón những vị khách đầu tiên.'],
+      checkin: ['Check-in & sử dụng vé', 'Kiểm tra vé và xác nhận hành khách tham gia tour.'],
+    };
     document.querySelectorAll('.tc-admin-tab-content').forEach((node) => { node.hidden = node.id !== `tc-admin-tab-${id}`; });
-    document.querySelectorAll('[data-tc-admin-tab]').forEach((node) => node.classList.toggle('active', node.dataset.tcAdminTab === id));
+    document.querySelectorAll('[data-tc-admin-tab]').forEach((node) => {
+      node.classList.toggle('active', node.dataset.tcAdminTab === id);
+      if (node.dataset.tcAdminTab === id) node.setAttribute('aria-current', 'page');
+      else node.removeAttribute('aria-current');
+    });
+    $('tc-admin-page-title').textContent = headings[id][0];
+    $('tc-admin-page-description').textContent = headings[id][1];
   }
   function view(admin) {
     opened = admin && allowed;
@@ -38,7 +49,7 @@ export function mountAdminApp({ document, wallet, tickets, settings }) {
     $('tc-admin-nav').hidden = !opened;
     $('tc-customer-view').hidden = opened;
     $('tc-customer-nav').hidden = opened;
-    $('tc-brand-sub').textContent = opened ? 'ADMIN CONSOLE' : 'TRAVEL ON CHAIN';
+    $('tc-brand-sub').textContent = opened ? 'KHÔNG GIAN QUẢN TRỊ' : 'ĐI & KHÁM PHÁ';
     $('tc-admin-open').textContent = opened ? 'Xem tour' : 'Quản trị';
     if (opened) { tab('overview'); void loadData(); }
   }
@@ -81,8 +92,8 @@ export function mountAdminApp({ document, wallet, tickets, settings }) {
       $('tc-stat-sold').textContent = tours.reduce((sum, tour) => sum + tour.soldTickets, 0n).toString();
       $('tc-stat-revenue').textContent = formatPrice(tours.reduce((sum, tour) => sum + tour.price * tour.soldTickets, 0n));
       $('tc-stat-used').textContent = allTickets.filter((ticket) => ticket.isUsed).length.toString();
-      $('tc-admin-tours').innerHTML = tours.length ? tours.map((tour) => `<tr><td>${tour.id}</td><td>${html(tour.name)}</td><td>${html(formatDeparture(tour.departureTime))}</td><td>${html(formatPrice(tour.price))}</td><td>${tour.soldTickets} / ${tour.totalTickets}</td></tr>`).join('') : '<tr><td colspan="5">Chưa có tour. Tạo tour để bắt đầu mở bán.</td></tr>';
-      $('tc-admin-tickets').innerHTML = allTickets.length ? allTickets.map((ticket) => `<tr><td>#${ticket.id}</td><td>${html(names.get(ticket.tourId.toString()) ?? `Tour #${ticket.tourId}`)}</td><td class="tc-address">${html(ticket.owner)}</td><td>${ticket.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng'}</td></tr>`).join('') : '<tr><td colspan="4">Chưa có vé được mua.</td></tr>';
+      $('tc-admin-tours').innerHTML = tours.length ? tours.map((tour) => `<tr><td>#${tour.id}</td><td>${html(tour.name)}</td><td>${html(formatDeparture(tour.departureTime))}</td><td>${html(formatPrice(tour.price))}</td><td><span class="tc-sales">${tour.soldTickets} / ${tour.totalTickets}<progress max="100" value="${tour.totalTickets > 0n ? Number(tour.soldTickets * 100n / tour.totalTickets) : 0}" aria-label="Tiến độ bán vé"></progress></span></td></tr>`).join('') : '<tr><td colspan="5">Chưa có tour. Tạo tour để bắt đầu mở bán.</td></tr>';
+      $('tc-admin-tickets').innerHTML = allTickets.length ? allTickets.map((ticket) => `<tr><td>#${ticket.id}</td><td>${html(names.get(ticket.tourId.toString()) ?? `Tour #${ticket.tourId}`)}</td><td class="tc-address">${html(ticket.owner)}</td><td><span class="tc-ticket-state${ticket.isUsed ? ' is-used' : ''}">${ticket.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng'}</span></td></tr>`).join('') : '<tr><td colspan="4">Chưa có vé được mua.</td></tr>';
       message('Dữ liệu đã được cập nhật từ blockchain.');
     } catch (error) {
       if (alive && current === epoch) {
@@ -165,6 +176,7 @@ export function mountAdminApp({ document, wallet, tickets, settings }) {
   on($('tc-admin-use-form'), 'submit', (event) => void use(event));
   on($('tc-checkin-id'), 'input', () => { ++lookupVersion; selected = null; $('tc-admin-use-form').hidden = true; $('tc-checkin-result').replaceChildren(); });
   document.querySelectorAll('[data-tc-admin-tab]').forEach((button) => on(button, 'click', () => tab(button.dataset.tcAdminTab)));
+  document.querySelectorAll('[data-tc-admin-shortcut]').forEach((button) => on(button, 'click', () => tab(button.dataset.tcAdminShortcut)));
   const unsubscribeWallet = wallet.subscribe((value) => void authorize(value));
   const unsubscribeTx = tickets.subscribeTransactions((value) => {
     tx = value; controls();

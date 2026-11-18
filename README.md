@@ -74,7 +74,7 @@ VITE_ADMIN_ADDRESS=
 VITE_DEPLOYMENT_BLOCK=
 ```
 
-`VITE_DEPLOYMENT_BLOCK` xác định điểm bắt đầu truy vấn sự kiện cho dashboard vé. Ứng dụng kiểm tra mạng, bytecode tại địa chỉ và ví admin trên contract. Thiếu cấu hình hoặc RPC lỗi sẽ báo lỗi; không thay bằng dữ liệu mẫu. Khởi động lại Vite hoặc build lại sau khi đổi `.env.local`.
+`VITE_DEPLOYMENT_BLOCK` lưu block triển khai để đối chiếu deployment. Dashboard đọc trực tiếp tour/vé tại một block thay vì quét lịch sử sự kiện. Ứng dụng kiểm tra mạng, bytecode tại địa chỉ và ví admin trên contract. Thiếu cấu hình hoặc RPC lỗi sẽ báo lỗi; không thay bằng dữ liệu mẫu. Khởi động lại Vite hoặc build lại sau khi đổi `.env.local`.
 
 ## Kiểm thử và build
 

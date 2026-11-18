@@ -107,6 +107,7 @@ test('admin creates a real tour, customer buys, admin uses the ticket and data s
   expect((await contract.tickets(0n)).isUsed).toBe(true);
   await page.locator('[data-tc-admin-tab="overview"]').click();
   await expect(page.locator('#tc-stat-used')).toHaveText('1');
+  await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo({ top: 0, behavior: 'instant' }); });
   await page.screenshot({ path: info.outputPath('admin.png'), fullPage: true });
   await choose(page, buyer.address);
   await expect(page.locator('#tc-admin-view')).toBeHidden();
@@ -116,6 +117,58 @@ test('admin creates a real tour, customer buys, admin uses the ticket and data s
   await page.screenshot({ path: info.outputPath('customer-mobile.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('redesigned tour filters, wallet entry and admin forms work on desktop and mobile', async ({ page }, info) => {
+  await createTour('Đà Lạt giữa ngàn thông', 1n);
+  const block = await rpc.getBlock('latest');
+  await (await contract.createTour('Hạ Long xanh', BigInt(block.timestamp) + 172800n, parseEther('0.005'), 5n)).wait();
+  await (await contract.createTour('Sa Pa mây trắng', BigInt(block.timestamp) + 259200n, parseEther('0.02'), 8n)).wait();
+  await (await contract.connect(buyer).buyTicket(0n, { value: parseEther('0.01') })).wait();
+  await setup(page, admin.address);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(page.locator('.tc-tour-card')).toHaveCount(3);
+  expect(await page.locator('.tc-hero-visual img').evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await page.locator('#tc-tour-filter').selectOption('available');
+  await expect(page.locator('.tc-tour-card')).toHaveCount(2);
+  await page.locator('#tc-tour-sort').selectOption('price');
+  await expect(page.locator('.tc-tour-card h3').first()).toHaveText('Hạ Long xanh');
+  await page.locator('#tc-search').fill('không có');
+  await expect(page.locator('#tc-tour-grid')).toContainText('Chưa tìm thấy tour phù hợp');
+  await page.locator('#tc-clear-search').click();
+  await expect(page.locator('.tc-tour-card')).toHaveCount(2);
+  await page.locator('#tc-tour-filter').selectOption('sold-out');
+  await expect(page.locator('.tc-tour-card')).toHaveCount(1);
+  await expect(page.locator('.tc-tour-card')).toContainText('Đã hết vé');
+  await page.locator('#tc-tour-filter').selectOption('all');
+  await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo({ top: 0, behavior: 'instant' }); });
+  await page.screenshot({ path: info.outputPath('home-desktop.png'), fullPage: true });
+  await page.locator('[data-tc-connect-tickets]').click();
+  await page.locator('#tc-admin-open').click();
+  await expect(page.locator('#tc-stat-tours')).toHaveText('3');
+  await page.locator('[data-tc-admin-shortcut="create-tour"]').click();
+  await expect(page.locator('#tc-admin-page-title')).toHaveText('Mở một hành trình mới');
+  await expect(page.locator('#tc-create-name')).toBeVisible();
+  await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo({ top: 0, behavior: 'instant' }); });
+  await page.screenshot({ path: info.outputPath('create-tour-desktop.png'), fullPage: true });
+  await page.locator('[data-tc-admin-tab="overview"]').click();
+  await page.locator('[data-tc-admin-shortcut="checkin"]').click();
+  await expect(page.locator('#tc-admin-page-title')).toHaveText('Check-in & sử dụng vé');
+  await page.locator('#tc-checkin-id').fill('0');
+  await page.locator('#tc-lookup-submit').click();
+  await expect(page.locator('#tc-checkin-result')).toContainText(buyer.address);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#tc-checkin-owner')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo({ top: 0, behavior: 'instant' }); });
+  await page.screenshot({ path: info.outputPath('checkin-mobile.png'), fullPage: true });
+  await page.locator('[data-tc-admin-tab="overview"]').click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#tc-admin-open').click();
+  await page.locator('.tc-faq summary').first().click();
+  await expect(page.locator('.tc-faq details').first()).toHaveAttribute('open', '');
+  await page.setViewportSize({ width: 360, height: 780 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test('a customer cannot gain admin access by calling the service directly', async ({ page }) => {

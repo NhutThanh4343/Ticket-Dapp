@@ -9,7 +9,7 @@
 - `createTour(input)`, `purchaseTicket(id)`, `useTicket(id)` dùng signer, chờ receipt và giải mã event từ đúng địa chỉ contract.
 - `readAdmin()` đối chiếu cấu hình với getter `admin()` trên chuỗi.
 - `readTicket(id)` dùng getter `tickets(id)` có sẵn trong source đã bàn giao.
-- `listTickets()` truy vấn `TicketPurchased` từ block triển khai theo từng khoảng 1.000 block, khử trùng ID và đọc trạng thái ticket hiện tại theo nhóm tối đa 20 vé.
+- `listTickets()` chốt một block, đọc tổng `soldTickets` từ `getTours()` và đọc `tickets(id)` tại cùng block theo nhóm tối đa 20 vé. Contract cấp ID liên tục từ 0, không xóa vé, nên tổng vé bán xác định chính xác dải ID; vé đã dùng vẫn được tính. Không quét lịch sử `eth_getLogs`, tránh hàng nghìn yêu cầu khi dùng RPC giới hạn 10 block/lần. Với dữ liệu lớn vẫn cần phân trang/indexer.
 
 Dashboard chỉ được mở sau khi ví hiện tại đúng mạng và khớp admin trên chuỗi. Ẩn giao diện không thay thế kiểm tra quyền trong Solidity. Khi đổi ví/mạng, UI đóng admin, xóa dữ liệu vé/quản trị và bỏ các phản hồi của phiên cũ. Khách và admin tải lại dữ liệu sau giao dịch và định kỳ khi trang đang hiển thị.
 

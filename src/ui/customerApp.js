@@ -29,6 +29,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
   let lastDepartures = '';
   let pollTicks = 0;
   const subscriptions = [];
+  let sectionObserver;
   const canReadChain = !settings.error;
   const isBusy = () => busyStatuses.has(state.transaction.status);
   const on = (node, event, listener, options = {}) => node.addEventListener(event, listener, { ...options, signal: abort.signal });
@@ -40,13 +41,14 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
     toastTimer = setTimeout(() => $('tc-toast').classList.remove('is-visible'), 5000);
   }
 
-  const messageCard = (title, message, error = false) => `<div class="tc-empty${error ? ' tc-error' : ''}"><strong>${html(title)}</strong><p>${html(message)}</p></div>`;
-  const tourTag = (tour) => hasDeparted(tour) ? 'Đã khởi hành' : remainingTickets(tour) === 0n ? 'Đã hết vé' : tour.tag;
+  const messageCard = (title, message, error = false, action = '') => `<div class="tc-empty${error ? ' tc-error' : ''}"><span class="tc-empty-icon" aria-hidden="true">${error ? '!' : '◇'}</span><strong>${html(title)}</strong><p>${html(message)}</p>${action}</div>`;
+  const tourState = (tour) => hasDeparted(tour) ? 'departed' : remainingTickets(tour) === 0n ? 'sold-out' : 'available';
+  const tourTag = (tour) => hasDeparted(tour) ? 'Đã khởi hành' : remainingTickets(tour) === 0n ? 'Đã hết vé' : 'Đang mở bán';
 
   function renderConnection() {
     const connected = state.wallet.connected;
     $('tc-data-mode').textContent = settings.error ? 'CHƯA CẤU HÌNH MẠNG' : settings.config.chainId === 31337n ? 'BLOCKCHAIN LOCAL' : 'SEPOLIA';
-    $('tc-source-label').textContent = 'NGUỒN DỮ LIỆU: BLOCKCHAIN';
+    $('tc-source-label').textContent = 'Đọc trực tiếp từ blockchain';
     const message = settings.error ? 'Kết nối blockchain chưa được cấu hình đầy đủ. Hiện chưa thể tải tour hoặc giao dịch.'
       : state.walletMessage || (!connected ? 'Bạn có thể xem tour ngay. Kết nối MetaMask để mua và xem vé.'
         : !state.wallet.isCorrectNetwork ? 'Ví đang ở mạng khác. Hãy chuyển sang mạng của hệ thống để mua và xem vé.'
@@ -78,20 +80,24 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
       return;
     }
     const query = $('tc-search').value.trim().toLocaleLowerCase('vi');
-    const filtered = state.tours.filter((tour) => `${tour.name} ${tour.location}`.toLocaleLowerCase('vi').includes(query));
+    const filter = $('tc-tour-filter').value;
+    const filtered = state.tours.filter((tour) => `${tour.name} ${tour.location}`.toLocaleLowerCase('vi').includes(query)
+      && (filter === 'all' || tourState(tour) === filter));
+    const sortKey = $('tc-tour-sort').value === 'price' ? 'price' : 'departureTime';
+    filtered.sort((a, b) => a[sortKey] < b[sortKey] ? -1 : a[sortKey] > b[sortKey] ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
     $('tc-count').textContent = `Hiển thị ${filtered.length} / ${state.tours.length} tour`;
     if (!filtered.length) {
-      grid.innerHTML = state.tours.length ? messageCard('Chưa tìm thấy tour phù hợp', 'Hãy thử một tên tour hoặc địa điểm khác.')
+      grid.innerHTML = state.tours.length ? messageCard('Chưa tìm thấy tour phù hợp', 'Hãy thử tên khác hoặc thay đổi bộ lọc trạng thái.')
         : messageCard('Chưa có tour mở bán', 'Hãy quay lại khi có hành trình mới.');
       return;
     }
     grid.innerHTML = filtered.map((tour) => `<article class="tc-tour-card">
-      <div class="tc-tour-cover"><img data-tc-image src="${html(tour.image)}" alt="${html(tour.name)}" loading="lazy"><span class="tc-card-tag">${html(tourTag(tour))}</span></div>
+      <div class="tc-tour-cover"><img data-tc-image src="${html(tour.image)}" alt="${html(tour.name)}" loading="lazy"><span class="tc-card-tag" data-state="${tourState(tour)}">${html(tourTag(tour))}</span></div>
       <div class="tc-tour-body"><p class="tc-tour-location">↗ ${html(tour.location)}</p><h3>${html(tour.name)}</h3>
         <p class="tc-tour-description">${html(tour.description)}</p>
-        <div class="tc-tour-meta"><div><small>Giá mỗi vé</small><div class="tc-tour-price">${html(formatPrice(tour.price))}</div>
-          <small>${html(formatDeparture(tour.departureTime))} · Còn ${remainingTickets(tour).toString()} vé</small></div>
-          <button class="tc-open-tour" data-tc-tour="${tour.id.toString()}" aria-label="${html(`Xem chi tiết ${tour.name}`)}">↗</button></div>
+        <div class="tc-tour-date">Khởi hành · ${html(formatDeparture(tour.departureTime))}</div>
+        <div class="tc-tour-meta"><div><small>Giá mỗi vé</small><div class="tc-tour-price">${html(formatPrice(tour.price))}</div><small>Còn ${remainingTickets(tour).toString()} vé</small></div>
+          <button class="tc-open-tour" data-tc-tour="${tour.id.toString()}" aria-label="${html(`Xem chi tiết ${tour.name}`)}">Xem chi tiết ↗</button></div>
       </div></article>`).join('');
   }
 
@@ -141,6 +147,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
     $('tc-dialog-image').alt = tour.name;
     $('tc-dialog-image').dataset.tcImage = '';
     $('tc-dialog-tag').textContent = tourTag(tour);
+    $('tc-dialog-tag').dataset.state = tourState(tour);
     $('tc-dialog-location').textContent = tour.location;
     $('tc-dialog-title').textContent = tour.name;
     $('tc-dialog-description').textContent = tour.description;
@@ -154,11 +161,11 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
     const list = $('tc-ticket-list');
     list.setAttribute('aria-busy', String(state.ticketsLoading));
     if (settings.error) list.innerHTML = messageCard('Chưa thể tải vé', 'Kết nối blockchain chưa được cấu hình.', true);
-    else if (!state.wallet.connected) list.innerHTML = messageCard('Kết nối ví để xem vé', 'Các vé đã mua sẽ xuất hiện theo tài khoản MetaMask đang kết nối.');
+    else if (!state.wallet.connected) list.innerHTML = messageCard('Kết nối ví để xem vé', 'Các vé đã mua sẽ xuất hiện theo tài khoản MetaMask đang kết nối.', false, '<button class="tc-btn tc-btn-primary" data-tc-connect-tickets>Kết nối MetaMask ↗</button>');
     else if (!state.wallet.isCorrectNetwork) list.innerHTML = messageCard('Hãy chuyển mạng để xem vé', 'Ví đang ở mạng khác với hệ thống.');
     else if (state.ticketsLoading) list.innerHTML = messageCard('Đang tải vé của bạn…', 'Đang đọc dữ liệu cho ví hiện tại.');
     else if (state.ticketsError) list.innerHTML = messageCard('Chưa tải được vé', state.ticketsError, true);
-    else if (!state.tickets.length) list.innerHTML = messageCard('Bạn chưa có vé', 'Khám phá các tour và chọn hành trình đầu tiên của bạn.');
+    else if (!state.tickets.length) list.innerHTML = messageCard('Bạn chưa có vé', 'Khám phá các tour và chọn hành trình đầu tiên của bạn.', false, '<a class="tc-text-link" href="#tours">Khám phá các hành trình ↗</a>');
     else list.innerHTML = state.tickets.map(({ ticket, tour }) => `<article class="tc-owned-ticket" data-tc-ticket="${ticket.id.toString()}">
       <div class="tc-owned-ticket-heading"><strong>Mã vé #${ticket.id.toString()}</strong><span class="tc-ticket-state${ticket.isUsed ? ' is-used' : ''}">${ticket.isUsed ? 'Đã sử dụng' : 'Chưa sử dụng'}</span></div>
       <h3>${html(tour?.name ?? `Tour #${ticket.tourId.toString()}`)}</h3>
@@ -291,11 +298,31 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
   }
 
   async function start() {
+    // Follow the section being viewed, including anchor and keyboard navigation.
+    const Observer = document.defaultView.IntersectionObserver;
+    if (Observer) {
+      sectionObserver = new Observer((entries) => {
+        const entry = entries.find((item) => item.isIntersecting);
+        if (!entry) return;
+        document.querySelectorAll('#tc-customer-nav a').forEach((link) => {
+          const active = link.hash === `#${entry.target.id}`;
+          link.classList.toggle('is-active', active);
+          if (active) link.setAttribute('aria-current', 'location');
+          else link.removeAttribute('aria-current');
+        });
+      }, { rootMargin: '-15% 0px -55% 0px', threshold: 0 });
+      ['home', 'tours', 'my-tickets'].forEach((id) => sectionObserver.observe($(id)));
+    }
     on($('tc-tour-grid'), 'click', (event) => {
       const button = event.target.closest('[data-tc-tour]');
       if (button) void openTour(button.dataset.tcTour);
     });
     on($('tc-search'), 'input', renderTours);
+    on($('tc-tour-filter'), 'change', renderTours);
+    on($('tc-tour-sort'), 'change', renderTours);
+    on($('tc-ticket-list'), 'click', (event) => {
+      if (event.target.closest('[data-tc-connect-tickets]')) void walletAction(() => wallet.connect());
+    });
     on($('tc-clear-search'), 'click', () => { $('tc-search').value = ''; renderTours(); $('tc-search').focus(); });
     on($('tc-connect'), 'click', () => void walletAction(() => wallet.connect()));
     on($('tc-switch-network'), 'click', () => void walletAction(() => wallet.switchNetwork()));
@@ -333,6 +360,7 @@ export function createCustomerApp({ document, wallet, tickets, settings }) {
 
   function destroy() {
     alive = false;
+    sectionObserver?.disconnect();
     abort.abort();
     clearTimeout(toastTimer);
     clearInterval(clock);

@@ -173,24 +173,43 @@ test('public reads do not access the wallet; empty arrays and ID zero are valid'
   assert.deepEqual(await service.listTours(), []);
 });
 
-test('ticket history retries restricted RPC ranges without skipping events or hiding other errors', async () => {
+test('admin reads contiguous ticket IDs at one block without scanning historical events', async () => {
   const { service, contract, rpc } = fixture();
-  config.deploymentBlock = 100;
-  rpc.getBlockNumber = async () => 125;
-  const ranges = [];
-  contract.filters = { TicketPurchased: () => 'purchases' };
-  contract.tickets = async () => ticket;
-  contract.queryFilter = async (_filter, from, to) => {
-    ranges.push([from, to]);
-    if (to - from >= 10) throw { code: 'UNKNOWN_ERROR', info: { error: { message: 'eth_getLogs requests with up to a 10 block range.' } } };
-    return from === 110 ? [receipt('TicketPurchased', [0n, 0n, buyer, tour.price]).logs[0]] : [];
+  rpc.getBlockNumber = async () => 12100000;
+  let active = 0, maximum = 0;
+  const ids = [];
+  contract.getTours = async (overrides) => {
+    assert.deepEqual(overrides, { blockTag: 12100000 });
+    return [{ ...tour, soldTickets: 10n }, { ...tour, id: 1n, soldTickets: 13n }];
   };
-  try {
-    assert.deepEqual(await service.listTickets(), [ticket]);
-    assert.deepEqual(ranges, [[100, 125], [100, 109], [110, 119], [120, 125]]);
-    contract.queryFilter = async () => { throw { code: 'NETWORK_ERROR' }; };
-    await assert.rejects(service.listTickets(), hasCode('RPC_ERROR'));
-  } finally { delete config.deploymentBlock; }
+  contract.queryFilter = async () => { assert.fail('Historical log queries must not be used'); };
+  contract.tickets = async (id, overrides) => {
+    assert.deepEqual(overrides, { blockTag: 12100000 });
+    active++; maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setImmediate(resolve));
+    active--; ids.push(id);
+    return { ...ticket, id, isUsed: id === 0n };
+  };
+  const all = await service.listTickets();
+  assert.deepEqual(all.map((item) => item.id), Array.from({ length: 23 }, (_, id) => BigInt(id)));
+  assert.equal(all[0].isUsed, true);
+  assert.equal(maximum, 20);
+  assert.equal(ids.length, 23);
+  contract.getTours = async () => [];
+  assert.deepEqual(await service.listTickets(), []);
+  contract.getTours = async () => { throw { code: 'NETWORK_ERROR' }; };
+  await assert.rejects(service.listTickets(), hasCode('RPC_ERROR'));
+});
+
+test('RPC rate limits and log restrictions have useful messages without leaking endpoint credentials', () => {
+  for (const error of [
+    { code: 'UNKNOWN_ERROR', error: { code: 429, message: 'Too many requests' } },
+    { code: 'SERVER_ERROR', info: { error: { code: -32005, message: 'limit exceeded' } } },
+    { code: 'UNKNOWN_ERROR', error: { message: 'Your requests exceeded the throughput limit' } },
+  ]) assert.equal(toIntegrationError(error).code, 'RPC_RATE_LIMIT');
+  const error = toIntegrationError({ error: { message: 'https://rpc.example/secret supports up to a 10 block range' } });
+  assert.equal(error.code, 'RPC_RANGE_LIMIT');
+  assert.ok(!error.message.includes('secret'));
 });
 
 test('real ethers Contract reads public tuples and sends the current caller for getMyTickets', async () => {

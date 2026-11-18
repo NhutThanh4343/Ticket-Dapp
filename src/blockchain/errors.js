@@ -29,6 +29,7 @@ export function toIntegrationError(error) {
   if (error instanceof IntegrationError) return error;
   const nested = [error, error?.error, error?.info?.error, error?.cause].filter(Boolean);
   const codes = nested.map((item) => item.code);
+  const detail = nested.map((item) => item.message ?? '').join(' ');
   if (codes.some((code) => code === 4001 || code === 'ACTION_REJECTED')) {
     return new IntegrationError('USER_REJECTED', 'Bạn đã từ chối yêu cầu trong ví.', error);
   }
@@ -56,7 +57,13 @@ export function toIntegrationError(error) {
   if (codes.includes(-32002)) {
     return new IntegrationError('WALLET_REQUEST_PENDING', 'Ví đang có yêu cầu chờ xử lý. Hãy mở MetaMask.', error);
   }
-  if (codes.some((code) => [4900, 4901, 'NETWORK_ERROR', 'SERVER_ERROR', 'TIMEOUT', 'OFFCHAIN_FAULT'].includes(code))) {
+  if (codes.some((code) => [429, '429', -32005].includes(code)) || /too many requests|rate limit|throughput|compute units per second/i.test(detail)) {
+    return new IntegrationError('RPC_RATE_LIMIT', 'RPC đang giới hạn lượt truy cập. Hãy chờ một lúc rồi tải lại dữ liệu; không cần gửi lại giao dịch.', error);
+  }
+  if (/block range|range of blocks/i.test(detail)) {
+    return new IntegrationError('RPC_RANGE_LIMIT', 'RPC giới hạn khoảng block có thể truy vấn. Hãy cập nhật ứng dụng hoặc dùng RPC hỗ trợ truy vấn này.', error);
+  }
+  if (codes.some((code) => [4900, 4901, -32603, 'NETWORK_ERROR', 'SERVER_ERROR', 'TIMEOUT', 'OFFCHAIN_FAULT'].includes(code))) {
     return new IntegrationError('RPC_ERROR', 'Không thể kết nối mạng blockchain. Vui lòng thử lại.', error);
   }
   return new IntegrationError('UNKNOWN_ERROR', 'Không thể hoàn tất thao tác. Vui lòng thử lại.', error);
